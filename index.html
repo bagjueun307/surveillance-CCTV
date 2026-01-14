@@ -18,9 +18,7 @@
         #kill-counter { position: absolute; top: 50px; right: 10px; background: rgba(50, 0, 0, 0.9); border: 1px solid #ff0000; padding: 8px; color: #ff0000; text-align: center; z-index: 10; min-width: 90px; }
         #kill-num { font-size: 24px; font-weight: bold; display: block; }
         
-        /* 레벨 표시기 추가 */
         #level-indicator { position: absolute; bottom: 10px; right: 10px; background: rgba(0,255,0,0.1); border: 1px solid #0f0; padding: 5px 15px; color: #0f0; font-weight: bold; }
-
         #timer-display { position: absolute; top: 10px; right: 10px; font-size: 14px; background: rgba(0,0,0,0.8); padding: 5px 10px; border: 1px solid #0f0; }
 
         #ui-panel { display: flex; padding: 20px; gap: 15px; background: #1a1a1a; height: 260px; }
@@ -104,16 +102,10 @@
 
     <script>
         let totalKills = 0; 
-        let currentSecurityLevel = 1; // 1, 2, 3 단계
+        let currentSecurityLevel = 1; 
+        let currentPhoneCode = ""; // 랜덤 번호 저장용
         
-        const watcherDB = [
-            { phone: "486", types: ["MAZE", "GAUGE", "MEMORY", "SLOT", "CODE"] },
-            { phone: "101", types: ["MEMORY", "SLOT", "CODE"] },
-            { phone: "777", types: ["MAZE", "GAUGE"] },
-            { phone: "258", types: ["SLOT", "CODE", "GAUGE"] }
-        ];
-
-        let dbIdx = 0, isAway = false, missionDone = 0, timeLeft = 15, isHackingMode = false, dialStr = "";
+        let isAway = false, missionDone = 0, timeLeft = 15, isHackingMode = false, dialStr = "";
         let gaugeInterval, slotInterval, isPhoneCooling = false;
 
         function init() {
@@ -141,9 +133,10 @@
             }, 1000);
         }
 
+        // 감시자 정보 업데이트 시 번호를 무조건 랜덤 생성
         function updateWatcherInfo() {
-            const current = watcherDB[dbIdx];
-            document.getElementById('phone-hint-text').innerText = `PHONE (${current.phone})`;
+            currentPhoneCode = Math.floor(100 + Math.random() * 900).toString(); // 무조건 랜덤 3자리
+            document.getElementById('phone-hint-text').innerText = `PHONE (${currentPhoneCode})`;
             document.getElementById('watcher-img').src = "https://raw.githubusercontent.com/bagjueun307/surveillance-CCTV/main/1.png";
             document.getElementById('kill-num').innerText = totalKills;
             document.getElementById('cur-level').innerText = currentSecurityLevel;
@@ -182,7 +175,7 @@
 
         function makeQuiz() {
             const types = ["MAZE", "GAUGE", "MEMORY", "SLOT", "CODE"];
-            const currentType = types[Math.floor(Math.random() * types.length)];
+            const currentType = types[Math.floor(Math.random() * types.length)]; // 모든 유형 중 무조건 랜덤
             const qText = document.getElementById('quiz-question');
             const qContent = document.getElementById('quiz-content');
             qContent.innerHTML = "";
@@ -264,7 +257,7 @@
 
         function dial() {
             if(isPhoneCooling) return;
-            if(dialStr === watcherDB[dbIdx].phone) {
+            if(dialStr === currentPhoneCode) { // 랜덤하게 바뀐 번호와 대조
                 if(!isAway) { timeLeft = 10; isAway = true; updateUI(); }
             }
             isPhoneCooling = true;
@@ -278,7 +271,6 @@
 
         function gameOver() {
             isHackingMode = false; totalKills++;
-            // 감시자가 죽으면 레벨 1부터 다시 시작
             currentSecurityLevel = 1; 
             document.getElementById('kill-num').innerText = totalKills;
             const overlay = document.getElementById('overlay');
@@ -290,7 +282,6 @@
             document.getElementById('res-desc').innerText = "비인가 접속이 감지되었습니다. 감시자가 제거되었으며 보안 레벨이 1단계로 강등되었습니다.";
             document.getElementById('res-btn').innerText = "재시작 (Level 1)";
             document.getElementById('res-btn').style.background = "#f00";
-            dbIdx = (dbIdx + 1) % watcherDB.length;
         }
 
         function win() {
@@ -300,7 +291,6 @@
             document.getElementById('res-img').style.display = "none";
             
             if(currentSecurityLevel < 3) {
-                // 레벨 업
                 document.getElementById('res-title').innerText = "LEVEL CLEAR";
                 document.getElementById('res-title').style.color = "#0f0";
                 document.getElementById('res-desc').innerText = `Level ${currentSecurityLevel} 해킹 완료. 상위 보안 노드로 이동합니다.`;
@@ -308,26 +298,23 @@
                 document.getElementById('res-btn').style.background = "#0f0";
                 currentSecurityLevel++;
             } else {
-                // 최종 승리
                 document.getElementById('res-title').innerText = "SYSTEM OVERRIDDEN";
                 document.getElementById('res-title').style.color = "white";
                 document.getElementById('res-title').style.textShadow = "0 0 10px #0f0";
                 document.getElementById('res-desc').innerText = "시설의 모든 보안 문이 개방되었습니다. 모든 제어 권한이 귀하에게 이전되었습니다.";
                 document.getElementById('res-btn').innerText = "시스템 재부팅";
                 document.getElementById('res-btn').style.background = "#555";
-                currentSecurityLevel = 1; // 게임 리셋을 원할 경우
+                currentSecurityLevel = 1; 
             }
-            dbIdx = (dbIdx + 1) % watcherDB.length;
         }
 
-        // 버튼 클릭 시 호출되는 함수 통합
         function handleNextStep() {
             missionDone = 0; 
             document.getElementById('mission-count').innerText = "0";
             document.querySelectorAll('.check-dot').forEach(dot => dot.classList.remove('done'));
             document.getElementById('overlay').style.display = "none";
             closeHackConsole(); 
-            updateWatcherInfo();
+            updateWatcherInfo(); // 다음 판에서도 번호를 새롭게 랜덤 생성
             timeLeft = 15; isAway = false; updateUI();
         }
 
