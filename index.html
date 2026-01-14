@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>Surveillance Escape</title>
+    <style>
+        body { background: #111; color: #0f0; font-family: 'Courier New', monospace; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; }
+        #game-screen { position: relative; width: 600px; height: 700px; border: 5px solid #333; background: #000; }
+        
+        /* 감시자 모니터 구역 */
+        #monitor { width: 100%; height: 350px; background: #222; overflow: hidden; position: relative; border-bottom: 5px solid #333; }
+        #watcher-img { width: 100%; height: 100%; object-fit: cover; transition: opacity 0.5s; }
+        #monitor-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; border: 10px solid transparent; transition: 0.3s; }
+        .watching { border-color: rgba(255, 0, 0, 0.5) !important; } /* 감시 중일 때 붉은 테두리 */
+
+        /* 하단 조작 구역 */
+        #control-panel { display: flex; padding: 20px; justify-content: space-between; height: 300px; }
+        
+        /* 키패드 */
+        #keypad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; width: 150px; }
+        .key { padding: 15px; background: #444; border: 1px solid #666; color: white; cursor: pointer; text-align: center; }
+        .key:hover { background: #666; }
+
+        /* 해킹 패널 */
+        #hacking-zone { width: 350px; text-align: center; border-left: 1px solid #333; padding-left: 20px; }
+        #hack-button { width: 100%; height: 100px; background: #050; color: #0f0; border: 2px solid #0f0; font-weight: bold; cursor: pointer; font-size: 20px; margin-top: 20px; }
+        #hack-button:disabled { border-color: #333; color: #333; cursor: not-allowed; }
+        
+        #progress-container { width: 100%; height: 300px; background: #111; border: 1px solid #0f0; margin-top: 10px; position: relative; }
+        #progress-fill { width: 0%; height: 100%; background: rgba(0, 255, 0, 0.3); transition: 0.2s; }
+        #status-msg { margin-top: 10px; font-size: 14px; color: yellow; }
+    </style>
+</head>
+<body>
+
+    <div style="margin-bottom: 10px;">힌트: 감시자의 번호는 [ 4 8 6 ] 입니다.</div>
+
+    <div id="game-screen">
+        <div id="monitor">
+            <img id="watcher-img" src="watcher.jpg" alt="감시자">
+            <div id="monitor-overlay" class="watching"></div>
+        </div>
+
+        <div id="control-panel">
+            <div>
+                <div style="margin-bottom: 10px;">PHONE KEYPAD</div>
+                <div id="keypad">
+                    <div class="key" onclick="pressKey('1')">1</div>
+                    <div class="key" onclick="pressKey('2')">2</div>
+                    <div class="key" onclick="pressKey('3')">3</div>
+                    <div class="key" onclick="pressKey('4')">4</div>
+                    <div class="key" onclick="pressKey('5')">5</div>
+                    <div class="key" onclick="pressKey('6')">6</div>
+                    <div class="key" onclick="pressKey('7')">7</div>
+                    <div class="key" onclick="pressKey('8')">8</div>
+                    <div class="key" onclick="pressKey('9')">9</div>
+                    <div class="key" onclick="pressKey('*')">*</div>
+                    <div class="key" onclick="pressKey('0')">0</div>
+                    <div class="key" onclick="clearKey()">C</div>
+                </div>
+                <div id="dial-display" style="margin-top:10px; font-size: 20px;">- - -</div>
+            </div>
+
+            <div id="hacking-zone">
+                <div>FIREWALL SECURITY</div>
+                <div id="progress-container">
+                    <div id="progress-fill"></div>
+                    <div style="position: absolute; top: 45%; width: 100%;">PROGRESS: <span id="percent">0</span>%</div>
+                </div>
+                <button id="hack-button" onmousedown="startHacking()" onmouseup="stopHacking()" disabled>HOLD TO HACK</button>
+                <div id="status-msg">감시자가 보고 있습니다...</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let isWatcherAway = false;
+        let hackProgress = 0;
+        let dialInput = "";
+        const targetNumber = "486";
+        
+        const watcherImg = document.getElementById('watcher-img');
+        const overlay = document.getElementById('monitor-overlay');
+        const hackBtn = document.getElementById('hack-button');
+        const statusMsg = document.getElementById('status-msg');
+        const progressFill = document.getElementById('progress-fill');
+        const percentText = document.getElementById('percent');
+
+        // 1. 키패드 입력 로직
+        function pressKey(num) {
+            dialInput += num;
+            document.getElementById('dial-display').innerText = dialInput;
+            
+            if (dialInput === targetNumber) {
+                triggerAway();
+            } else if (dialInput.length >= 3) {
+                clearKey();
+            }
+        }
+
+        function clearKey() {
+            dialInput = "";
+            document.getElementById('dial-display').innerText = "- - -";
+        }
+
+        // 2. 감시자 유인 로직
+        function triggerAway() {
+            isWatcherAway = true;
+            watcherImg.style.opacity = "0.1"; // 감시자 사라짐 효과
+            overlay.classList.remove('watching');
+            hackBtn.disabled = false;
+            statusMsg.innerText = "감시자가 자리를 비웠습니다! 해킹하세요!";
+            clearKey();
+
+            // 7초 후 복귀
+            setTimeout(() => {
+                isWatcherAway = false;
+                watcherImg.style.opacity = "1";
+                overlay.classList.add('watching');
+                hackBtn.disabled = true;
+                statusMsg.innerText = "감시자가 돌아왔습니다!";
+                stopHacking();
+            }, 7000);
+        }
+
+        // 3. 해킹 로직
+        let hackInterval;
+        function startHacking() {
+            if (!isWatcherAway) return;
+            hackInterval = setInterval(() => {
+                if (hackProgress < 100) {
+                    hackProgress += 1;
+                    progressFill.style.width = hackProgress + "%";
+                    percentText.innerText = hackProgress;
+                } else {
+                    alert("탈출 성공! 방화벽이 해제되었습니다.");
+                    location.reload();
+                }
+            }, 50);
+        }
+
+        function stopHacking() {
+            clearInterval(hackInterval);
+        }
+
+        // 4. 감시 중 클릭 감지 (패배 조건)
+        document.body.addEventListener('mousedown', () => {
+            if (!isWatcherAway && hackProgress > 0) {
+                alert("감시자에게 걸렸습니다! 게임 오버.");
+                location.reload();
+            }
+        });
+    </script>
+</body>
+</html>
