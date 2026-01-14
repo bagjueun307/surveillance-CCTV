@@ -15,8 +15,8 @@
         .check-dot { display: inline-block; width: 12px; height: 12px; border: 1px solid #0f0; margin-right: 4px; border-radius: 2px; }
         .done { background: #0f0; box-shadow: 0 0 5px #0f0; }
         
-        /* 킬 카운터: 절대 리셋되지 않음 */
-        #kill-counter { position: absolute; top: 50px; right: 10px; background: rgba(50, 0, 0, 0.9); border: 1px solid #ff0000; padding: 8px; color: #ff0000; text-align: center; z-index: 5; min-width: 90px; }
+        /* 실시간 누적 킬 카운터 */
+        #kill-counter { position: absolute; top: 50px; right: 10px; background: rgba(50, 0, 0, 0.9); border: 1px solid #ff0000; padding: 8px; color: #ff0000; text-align: center; z-index: 10; min-width: 90px; }
         #kill-num { font-size: 24px; font-weight: bold; display: block; }
 
         #timer-display { position: absolute; top: 10px; right: 10px; font-size: 14px; background: rgba(0,0,0,0.8); padding: 5px 10px; border: 1px solid #0f0; }
@@ -41,7 +41,6 @@
         .exit-hint { font-size: 10px; color: #ff0000; margin-top: 5px; animation: flash 1s infinite; }
         @keyframes flash { 50% { opacity: 0; } }
 
-        /* 결과 화면 */
         #overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); display: none; flex-direction: column; align-items: center; justify-content: center; z-index: 100; text-align: center; }
         #overlay img { width: 70%; border: 4px solid red; margin-bottom: 20px; }
     </style>
@@ -83,8 +82,8 @@
                 <div id="quiz-box">
                     <div id="quiz-question">ANALYZING...</div>
                     <input type="number" id="quiz-input" onkeydown="handleInput(event)" placeholder="??">
-                    <button id="hold-btn">강제 접속 중...</button>
-                    <div class="exit-hint">감시자가 돌아옵니다! ESC로 대피하세요!</div>
+                    <button id="hold-btn">보안 해제 유지 중...</button>
+                    <div class="exit-hint">감시자가 돌아옵니다! ESC를 눌러 대피!</div>
                     <button onclick="closeHackConsole()" style="margin-top:10px; background:#400; color:white; border:none; cursor:pointer; font-size:10px; padding:5px 10px;">로그아웃(ESC)</button>
                 </div>
             </div>
@@ -99,16 +98,17 @@
     </div>
 
     <script>
+        // 전역 변수: 게임 전체에서 유지됨
+        let totalKills = 0; 
+
         const watcherDB = [
             { phone: "486", type: "MATH" },
-            { phone: "123", type: "HOLD" },
+            { phone: "101", type: "HOLD" },
             { phone: "777", type: "MATH" },
-            { phone: "258", type: "HOLD" }
+            { phone: "000", type: "HOLD" }
         ];
 
         let dbIdx = 0;
-        let totalKills = 0; // 전역 변수로 관리 (절대 리셋 안됨)
-        
         let isAway = false;
         let missionDone = 0;
         let timeLeft = 15;
@@ -147,7 +147,7 @@
             const current = watcherDB[dbIdx];
             document.getElementById('phone-hint-text').innerText = `PHONE (${current.phone})`;
             document.getElementById('watcher-img').src = "https://raw.githubusercontent.com/bagjueun307/surveillance-CCTV/main/1.png";
-            document.getElementById('kill-num').innerText = totalKills; // 화면 갱신 시에도 유지
+            document.getElementById('kill-num').innerText = totalKills; // 화면 갱신 시 누적 수 반영
         }
 
         function updateUI() {
@@ -206,7 +206,7 @@
             } else {
                 qInput.style.display = "none";
                 qHold.style.display = "block";
-                qText.innerText = "보안 우회: 버튼을 2초간 유지";
+                qText.innerText = "바이오 보안 해제: 버튼 유지";
                 qHold.onmousedown = startHold;
                 qHold.onmouseup = endHold;
             }
@@ -250,20 +250,22 @@
 
         function gameOver() {
             isHackingMode = false;
-            totalKills++; // 누적 킬 수 증가
-            document.getElementById('kill-num').innerText = totalKills; // 즉시 반영
+            totalKills++; // 누적 킬 증가
+            document.getElementById('kill-num').innerText = totalKills;
             
             const overlay = document.getElementById('overlay');
             overlay.style.display = "flex";
             
+            const resImg = document.getElementById('res-img');
+            resImg.style.display = "block"; // 발각 시 이미지 노출
+            resImg.src = "https://raw.githubusercontent.com/bagjueun307/surveillance-CCTV/main/3.png";
+            
             document.getElementById('res-title').innerText = "WATCHER ELIMINATED";
             document.getElementById('res-title').style.color = "red";
-            document.getElementById('res-img').style.display = "block"; // 발각 시에는 이미지 보임
-            document.getElementById('res-img').src = "https://raw.githubusercontent.com/bagjueun307/surveillance-CCTV/main/3.png";
-            document.getElementById('res-desc').innerText = "감시자가 당신을 발견하고 사살되었습니다. 새로운 감시자가 배치됩니다.";
+            document.getElementById('res-desc').innerText = "감시자가 당신을 발견하고 제거되었습니다. 새로운 타겟이 배치됩니다.";
             
             const btn = document.getElementById('res-btn');
-            btn.innerText = "다음 감시자 시퀀스";
+            btn.innerText = "다음 구역 시퀀스";
             btn.style.background = "#f00";
             btn.style.color = "white";
 
@@ -275,16 +277,15 @@
             const overlay = document.getElementById('overlay');
             overlay.style.display = "flex";
             
+            const resImg = document.getElementById('res-img');
+            resImg.style.display = "none"; // 성공 시 이미지 숨김 (핵심 수정)
+            
             document.getElementById('res-title').innerText = "MISSION SUCCESS";
             document.getElementById('res-title').style.color = "#0f0";
-            
-            // 미션 성공 시 이미지를 숨김 (요청 사항)
-            document.getElementById('res-img').style.display = "none";
-            
-            document.getElementById('res-desc').innerText = "모든 보안 프로토콜을 우회했습니다. 당신은 이제 시스템의 주인입니다.";
+            document.getElementById('res-desc').innerText = "시스템의 모든 제어권을 획득했습니다. 완벽한 승리입니다.";
             
             const btn = document.getElementById('res-btn');
-            btn.innerText = "새로운 구역 침투";
+            btn.innerText = "다른 시스템 침투";
             btn.style.background = "#0f0";
             btn.style.color = "black";
             
@@ -292,14 +293,14 @@
         }
 
         function nextWatcher() {
-            missionDone = 0;
+            missionDone = 0; // 미션 점수 리셋
             document.getElementById('mission-count').innerText = "0";
             const dots = document.getElementsByClassName('check-dot');
             for(let dot of dots) dot.classList.remove('done');
 
             document.getElementById('overlay').style.display = "none";
             closeHackConsole();
-            updateWatcherInfo();
+            updateWatcherInfo(); // 킬 카운트 포함 정보 갱신
             
             timeLeft = 15;
             isAway = false;
