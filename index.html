@@ -15,11 +15,12 @@
         #mission-status { position: absolute; top: 10px; left: 10px; background: rgba(0,0,0,0.8); padding: 10px; border: 1px solid #0f0; }
         .check-dot { display: inline-block; width: 12px; height: 12px; border: 1px solid #0f0; margin-right: 4px; border-radius: 2px; }
         .done { background: #0f0; box-shadow: 0 0 5px #0f0; }
-        #timer-display { position: absolute; top: 10px; right: 10px; font-size: 14px; background: rgba(0,0,0,0.8); padding: 5px 10px; border: 1px solid #0f0; }
+        
+        /* 킬 카운터 UI: 게임 화면 내부 오른쪽 상단 배치 */
+        #kill-counter { position: absolute; top: 50px; right: 10px; background: rgba(50, 0, 0, 0.9); border: 1px solid #ff0000; padding: 8px; color: #ff0000; text-align: center; z-index: 5; min-width: 80px; }
+        #kill-num { font-size: 20px; font-weight: bold; display: block; }
 
-        /* 누적 킬 카운트 UI (추가됨) */
-        #kill-counter { position: absolute; top: 10px; left: 720px; width: 150px; background: #1a0000; border: 2px solid #ff0000; padding: 15px; color: #ff0000; text-align: center; box-shadow: 0 0 10px rgba(255,0,0,0.3); }
-        #kill-num { font-size: 32px; font-weight: bold; display: block; margin-top: 5px; }
+        #timer-display { position: absolute; top: 10px; right: 10px; font-size: 14px; background: rgba(0,0,0,0.8); padding: 5px 10px; border: 1px solid #0f0; }
 
         /* 하단 UI 패널 */
         #ui-panel { display: flex; padding: 20px; gap: 15px; background: #1a1a1a; height: 250px; }
@@ -34,7 +35,7 @@
         #quiz-question { font-size: 18px; margin-bottom: 10px; color: #ff0; }
         #quiz-input { background: #000; border: 1px solid #0f0; color: #0f0; width: 100px; font-size: 20px; text-align: center; margin-bottom: 10px; }
         
-        /* 특수 미션: 꾹 누르기 */
+        /* 특수 미션: 꾹 누르기 버튼 */
         #hold-btn { display: none; width: 120px; height: 40px; background: #400; border: 2px solid #f00; color: #f00; cursor: pointer; font-weight: bold; margin: 0 auto 10px; }
         #hold-btn:active { background: #f00; color: #000; }
 
@@ -53,25 +54,24 @@
 
     <div style="margin-bottom: 10px; color: yellow;">[주의: 감시자가 오기 전 ESC 키를 눌러 해킹 콘솔을 닫으세요!]</div>
 
-    <div id="kill-counter">
-        ELIMINATED
-        <span id="kill-num">0</span>
-    </div>
-
     <div id="game-screen">
         <div id="monitor">
+            <div id="kill-counter">
+                ELIMINATED
+                <span id="kill-num">0</span>
+            </div>
+
             <img id="watcher-img" src="https://raw.githubusercontent.com/bagjueun307/surveillance-CCTV/main/1.png">
             <div id="mission-status">
                 <div>MISSION: <span id="mission-count">0</span> / 10</div>
                 <div id="check-container" style="margin-top:5px;"></div>
-                <div id="watcher-tag" style="font-size: 10px; color: #f00; margin-top:5px;">상태: 추적 중</div>
             </div>
             <div id="timer-display"><span id="state-label">감시 중</span> (<span id="cycle-timer">15</span>s)</div>
         </div>
 
         <div id="ui-panel">
             <div class="keypad-container">
-                <div id="phone-hint-text" style="font-size: 10px; margin-bottom: 5px;">PHONE (---)</div>
+                <div id="phone-hint-text" style="font-size: 10px; margin-bottom: 5px;">PHONE (486)</div>
                 <div id="phone-display">---</div>
                 <div class="keypad">
                     <div class="key" onclick="press('1')">1</div><div class="key" onclick="press('2')">2</div><div class="key" onclick="press('3')">3</div>
@@ -87,7 +87,7 @@
                 <div id="quiz-box">
                     <div id="quiz-question">ANALYZING...</div>
                     <input type="number" id="quiz-input" onkeydown="handleInput(event)" placeholder="??">
-                    <button id="hold-btn">바이오메트릭 우회 중...</button>
+                    <button id="hold-btn">강제 접속 시도 중...</button>
                     <div class="exit-hint">감시자가 돌아옵니다! 제거되기 싫다면 ESC!</div>
                     <button onclick="closeHackConsole()" style="margin-top:10px; background:#400; color:white; border:none; cursor:pointer; font-size:10px; padding:5px 10px;">로그아웃(ESC)</button>
                 </div>
@@ -97,23 +97,22 @@
         <div id="overlay">
             <h1 id="res-title" style="color:red;">WATCHER ELIMINATED</h1>
             <img id="res-img" src="https://raw.githubusercontent.com/bagjueun307/surveillance-CCTV/main/3.png">
-            <div id="res-desc" style="margin-bottom:20px; color:#aaa;">감시자가 당신을 발견하고 제거되었습니다. 새로운 인원이 배치됩니다.</div>
+            <div id="res-desc" style="color:#aaa; margin-bottom:20px;">감시자가 제거되었습니다. 다음 구역으로 넘어갑니다.</div>
             <button onclick="nextWatcher()" style="padding:10px 20px; cursor:pointer; background:#f00; color:white; font-weight:bold; border:none;">다음 타겟 확인</button>
         </div>
     </div>
 
     <script>
-        // 감시자 데이터베이스
+        // 감시자 데이터
         const watcherDB = [
             { phone: "486", type: "MATH" },
-            { phone: "101", type: "HOLD" },
-            { phone: "732", type: "MATH" },
-            { phone: "999", type: "HOLD" },
-            { phone: "154", type: "MATH" }
+            { phone: "123", type: "HOLD" },
+            { phone: "777", type: "MATH" },
+            { phone: "258", type: "HOLD" }
         ];
 
         let dbIdx = 0;
-        let killCount = 0; // 누적 처치 수 (리셋 안됨)
+        let killCount = 0; // 누적되는 킬 카운트
         
         let isAway = false;
         let missionDone = 0;
@@ -121,7 +120,6 @@
         let currentAns = 0;
         let isHackingMode = false;
         let dialStr = "";
-        
         let holdTimer;
         let holdProgress = 0;
 
@@ -209,10 +207,10 @@
                 qText.innerText = `${n1} + ${n2} = ?`;
                 qInput.value = "";
                 qInput.focus();
-            } else if(current.type === "HOLD") {
+            } else {
                 qInput.style.display = "none";
                 qHold.style.display = "block";
-                qText.innerText = "데이터 강제 주입: 버튼 유지";
+                qText.innerText = "바이오 보안: 버튼을 2초간 유지";
                 qHold.onmousedown = startHold;
                 qHold.onmouseup = endHold;
             }
@@ -256,21 +254,19 @@
 
         function gameOver() {
             isHackingMode = false;
-            // 킬 카운트 증가
+            // 킬 카운트 증가 로직
             killCount++;
             document.getElementById('kill-num').innerText = killCount;
             
-            // 결과창 표시
+            // 결과창
             document.getElementById('overlay').style.display = "flex";
             document.getElementById('res-img').src = "https://raw.githubusercontent.com/bagjueun307/surveillance-CCTV/main/3.png";
             
-            // 다음 감시자 데이터 준비
             dbIdx = (dbIdx + 1) % watcherDB.length;
         }
 
         function nextWatcher() {
-            // 미션 리셋
-            missionDone = 0;
+            missionDone = 0; // 미션만 리셋
             document.getElementById('mission-count').innerText = "0";
             const dots = document.getElementsByClassName('check-dot');
             for(let dot of dots) dot.classList.remove('done');
@@ -287,9 +283,8 @@
         function win() {
             isHackingMode = false;
             document.getElementById('overlay').style.display = "flex";
-            document.getElementById('res-title').innerText = "SYSTEM HIJACKED";
+            document.getElementById('res-title').innerText = "SECURITY BREACHED";
             document.getElementById('res-title').style.color = "#0f0";
-            document.getElementById('res-desc').innerText = "모든 보안을 돌파했습니다. 관리자 권한을 획득했습니다.";
             document.getElementById('res-img').src = "https://raw.githubusercontent.com/bagjueun307/surveillance-CCTV/main/1.png";
         }
 
