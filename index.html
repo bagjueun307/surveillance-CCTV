@@ -17,6 +17,10 @@
         
         #kill-counter { position: absolute; top: 50px; right: 10px; background: rgba(50, 0, 0, 0.9); border: 1px solid #ff0000; padding: 8px; color: #ff0000; text-align: center; z-index: 10; min-width: 90px; }
         #kill-num { font-size: 24px; font-weight: bold; display: block; }
+        
+        /* 레벨 표시기 추가 */
+        #level-indicator { position: absolute; bottom: 10px; right: 10px; background: rgba(0,255,0,0.1); border: 1px solid #0f0; padding: 5px 15px; color: #0f0; font-weight: bold; }
+
         #timer-display { position: absolute; top: 10px; right: 10px; font-size: 14px; background: rgba(0,0,0,0.8); padding: 5px 10px; border: 1px solid #0f0; }
 
         #ui-panel { display: flex; padding: 20px; gap: 15px; background: #1a1a1a; height: 260px; }
@@ -29,7 +33,6 @@
         #quiz-box { width: 100%; text-align: center; display: none; background: #000; padding: 15px; border: 1px solid #0f0; box-sizing: border-box; color: #0f0; }
         #quiz-question { font-size: 13px; margin-bottom: 10px; color: #ff0; min-height: 32px; }
 
-        /* 문제 스타일 */
         #maze-container { display: grid; grid-template-columns: repeat(5, 25px); gap: 2px; justify-content: center; }
         .cell { width: 25px; height: 25px; background: #222; border: 1px solid #333; cursor: pointer; }
         .wall { background: #111; border: none; cursor: default; }
@@ -64,6 +67,7 @@
                 <div id="check-container" style="margin-top:5px;"></div>
             </div>
             <div id="timer-display"><span id="state-label">감시 중</span> (<span id="cycle-timer">15</span>s)</div>
+            <div id="level-indicator">SECURITY LEVEL: <span id="cur-level">1</span> / 3</div>
         </div>
 
         <div id="ui-panel">
@@ -94,12 +98,14 @@
             <h1 id="res-title"></h1>
             <img id="res-img" src="">
             <div id="res-desc" style="color:#aaa; margin-bottom:20px; padding: 0 40px;"></div>
-            <button id="res-btn" onclick="nextWatcher()" style="padding:10px 20px; cursor:pointer; font-weight:bold; border:none;"></button>
+            <button id="res-btn" onclick="handleNextStep()" style="padding:10px 20px; cursor:pointer; font-weight:bold; border:none;"></button>
         </div>
     </div>
 
     <script>
         let totalKills = 0; 
+        let currentSecurityLevel = 1; // 1, 2, 3 단계
+        
         const watcherDB = [
             { phone: "486", types: ["MAZE", "GAUGE", "MEMORY", "SLOT", "CODE"] },
             { phone: "101", types: ["MEMORY", "SLOT", "CODE"] },
@@ -140,6 +146,7 @@
             document.getElementById('phone-hint-text').innerText = `PHONE (${current.phone})`;
             document.getElementById('watcher-img').src = "https://raw.githubusercontent.com/bagjueun307/surveillance-CCTV/main/1.png";
             document.getElementById('kill-num').innerText = totalKills;
+            document.getElementById('cur-level').innerText = currentSecurityLevel;
         }
 
         function updateUI() {
@@ -187,16 +194,13 @@
                 const container = document.createElement('div');
                 container.id = "maze-container";
                 let lastIdx = 0;
-
                 mazeData.forEach((type, idx) => {
                     const cell = document.createElement('div');
                     cell.className = 'cell ' + (type === 0 ? 'wall' : '');
                     if(idx === 0) cell.classList.add('start-cell', 'path-active');
                     if(idx === 24) cell.classList.add('end-cell');
-                    
                     cell.onclick = () => {
                         if(type === 1) {
-                            // 인접한 칸인지 간단 체크 (상하좌우)
                             const diff = Math.abs(idx - lastIdx);
                             if(diff === 1 || diff === 5) {
                                 cell.classList.add('path-active');
@@ -274,6 +278,8 @@
 
         function gameOver() {
             isHackingMode = false; totalKills++;
+            // 감시자가 죽으면 레벨 1부터 다시 시작
+            currentSecurityLevel = 1; 
             document.getElementById('kill-num').innerText = totalKills;
             const overlay = document.getElementById('overlay');
             overlay.style.display = "flex";
@@ -281,8 +287,8 @@
             document.getElementById('res-img').src = "https://raw.githubusercontent.com/bagjueun307/surveillance-CCTV/main/3.png";
             document.getElementById('res-title').innerText = "WATCHER ELIMINATED";
             document.getElementById('res-title').style.color = "red";
-            document.getElementById('res-desc').innerText = "비인가 접속이 감지되었습니다. 타겟을 제거합니다.";
-            document.getElementById('res-btn').innerText = "다음 구역";
+            document.getElementById('res-desc').innerText = "비인가 접속이 감지되었습니다. 감시자가 제거되었으며 보안 레벨이 1단계로 강등되었습니다.";
+            document.getElementById('res-btn').innerText = "재시작 (Level 1)";
             document.getElementById('res-btn').style.background = "#f00";
             dbIdx = (dbIdx + 1) % watcherDB.length;
         }
@@ -292,19 +298,36 @@
             const overlay = document.getElementById('overlay');
             overlay.style.display = "flex";
             document.getElementById('res-img').style.display = "none";
-            document.getElementById('res-title').innerText = "MISSION SUCCESS";
-            document.getElementById('res-title').style.color = "#0f0";
-            document.getElementById('res-desc').innerText = "데이터 추출 완료. 시스템을 장악했습니다.";
-            document.getElementById('res-btn').innerText = "다른 시스템 침투";
-            document.getElementById('res-btn').style.background = "#0f0";
+            
+            if(currentSecurityLevel < 3) {
+                // 레벨 업
+                document.getElementById('res-title').innerText = "LEVEL CLEAR";
+                document.getElementById('res-title').style.color = "#0f0";
+                document.getElementById('res-desc').innerText = `Level ${currentSecurityLevel} 해킹 완료. 상위 보안 노드로 이동합니다.`;
+                document.getElementById('res-btn').innerText = `LEVEL ${currentSecurityLevel + 1} 진입`;
+                document.getElementById('res-btn').style.background = "#0f0";
+                currentSecurityLevel++;
+            } else {
+                // 최종 승리
+                document.getElementById('res-title').innerText = "SYSTEM OVERRIDDEN";
+                document.getElementById('res-title').style.color = "white";
+                document.getElementById('res-title').style.textShadow = "0 0 10px #0f0";
+                document.getElementById('res-desc').innerText = "시설의 모든 보안 문이 개방되었습니다. 모든 제어 권한이 귀하에게 이전되었습니다.";
+                document.getElementById('res-btn').innerText = "시스템 재부팅";
+                document.getElementById('res-btn').style.background = "#555";
+                currentSecurityLevel = 1; // 게임 리셋을 원할 경우
+            }
             dbIdx = (dbIdx + 1) % watcherDB.length;
         }
 
-        function nextWatcher() {
-            missionDone = 0; document.getElementById('mission-count').innerText = "0";
+        // 버튼 클릭 시 호출되는 함수 통합
+        function handleNextStep() {
+            missionDone = 0; 
+            document.getElementById('mission-count').innerText = "0";
             document.querySelectorAll('.check-dot').forEach(dot => dot.classList.remove('done'));
             document.getElementById('overlay').style.display = "none";
-            closeHackConsole(); updateWatcherInfo();
+            closeHackConsole(); 
+            updateWatcherInfo();
             timeLeft = 15; isAway = false; updateUI();
         }
 
