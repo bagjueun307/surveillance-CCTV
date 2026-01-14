@@ -2,9 +2,9 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <title>Surveillance CCTV - Stealth Hack</title>
+    <title>Surveillance CCTV - Ultimate Stealth Hack</title>
     <style>
-        body { background: #050505; color: #00ff00; font-family: 'Courier New', monospace; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; }
+        body { background: #050505; color: #00ff00; font-family: 'Courier New', monospace; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; overflow: hidden; }
         #game-screen { position: relative; width: 700px; background: #111; border: 4px solid #333; box-shadow: 0 0 20px rgba(0,255,0,0.2); }
         
         #monitor { width: 100%; height: 350px; background: #000; overflow: hidden; position: relative; border-bottom: 4px solid #333; }
@@ -19,44 +19,41 @@
         #kill-num { font-size: 24px; font-weight: bold; display: block; }
         #timer-display { position: absolute; top: 10px; right: 10px; font-size: 14px; background: rgba(0,0,0,0.8); padding: 5px 10px; border: 1px solid #0f0; }
 
-        #ui-panel { display: flex; padding: 20px; gap: 15px; background: #1a1a1a; height: 250px; }
+        #ui-panel { display: flex; padding: 20px; gap: 15px; background: #1a1a1a; height: 260px; }
         .keypad-container { width: 140px; }
-        #phone-display { background: #000; padding: 5px; text-align: center; border: 1px solid #0f0; height: 20px; margin-bottom: 5px; }
+        #phone-display { background: #000; padding: 5px; text-align: center; border: 1px solid #0f0; height: 20px; margin-bottom: 5px; color: #0f0; }
         .keypad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; }
         .key { padding: 10px; background: #333; border: 1px solid #555; color: #0f0; cursor: pointer; text-align: center; font-size: 12px; }
-        .key:disabled { color: #444; cursor: not-allowed; }
-
+        
         .hack-container { flex-grow: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; border-left: 1px solid #333; padding-left: 15px; position: relative; }
-        #quiz-box { width: 100%; text-align: center; display: none; background: #000; padding: 15px; border: 1px solid #0f0; box-sizing: border-box; }
-        #quiz-question { font-size: 14px; margin-bottom: 10px; color: #ff0; }
+        #quiz-box { width: 100%; text-align: center; display: none; background: #000; padding: 15px; border: 1px solid #0f0; box-sizing: border-box; color: #0f0; }
+        #quiz-question { font-size: 13px; margin-bottom: 10px; color: #ff0; min-height: 32px; }
 
-        #maze-container { display: grid; grid-template-columns: repeat(5, 25px); gap: 2px; justify-content: center; margin: 0 auto; }
+        /* 문제 스타일 */
+        #maze-container { display: grid; grid-template-columns: repeat(5, 25px); gap: 2px; justify-content: center; }
         .cell { width: 25px; height: 25px; background: #222; border: 1px solid #333; cursor: pointer; }
-        .wall { background: #444; cursor: not-allowed; }
-        .start { background: #00f; }
-        .end { background: #f0f; }
-        .player { background: #0f0; box-shadow: 0 0 5px #0f0; }
+        .wall { background: #111; border: none; cursor: default; }
+        .path-active { background: #0f0 !important; box-shadow: 0 0 5px #0f0; }
+        .start-cell { background: #00f; }
+        .end-cell { background: #f0f; }
 
-        #gauge-bg { width: 150px; height: 20px; background: #333; margin: 10px auto; border: 1px solid #555; position: relative; }
-        #gauge-bar { width: 0%; height: 100%; background: #0f0; transition: 0.1s; }
+        #gauge-bg { width: 150px; height: 20px; background: #333; margin: 5px auto; position: relative; }
+        #gauge-bar { width: 0%; height: 100%; background: #0f0; }
         #gauge-target { position: absolute; left: 70%; width: 20%; height: 100%; border: 2px solid #fff; box-sizing: border-box; }
 
-        /* 보안 접속 버튼: 비활성화 스타일 제거 */
-        #start-hack-btn { width: 100%; height: 100px; background: #020; border: 2px solid #0f0; color: #0f0; font-weight: bold; cursor: pointer; }
+        .memory-btn { width: 40px; height: 40px; margin: 2px; background: #222; border: 1px solid #0f0; color: #0f0; cursor: pointer; }
+        .slot-display { font-size: 30px; letter-spacing: 10px; margin: 10px; font-weight: bold; }
+        #code-input { background: #000; border: 1px solid #0f0; color: #0f0; font-size: 20px; width: 100px; text-align: center; margin-top: 5px; }
 
+        #start-hack-btn { width: 100%; height: 100px; background: #020; border: 2px solid #0f0; color: #0f0; font-weight: bold; cursor: pointer; }
         .exit-hint { font-size: 10px; color: #ff0000; margin-top: 5px; animation: flash 1s infinite; }
         @keyframes flash { 50% { opacity: 0; } }
 
         #overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); display: none; flex-direction: column; align-items: center; justify-content: center; z-index: 100; text-align: center; }
         #overlay img { width: 70%; border: 4px solid red; margin-bottom: 20px; }
-        
-        /* 쿨타임 알림 스타일 */
-        #phone-status { font-size: 9px; color: #ff0; height: 12px; margin-bottom: 2px; }
     </style>
 </head>
 <body>
-
-    <div style="margin-bottom: 10px; color: yellow;">[주의: 감시자가 오기 전 ESC 키를 눌러 대피하세요!]</div>
 
     <div id="game-screen">
         <div id="monitor">
@@ -71,8 +68,8 @@
 
         <div id="ui-panel">
             <div class="keypad-container">
-                <div id="phone-hint-text" style="font-size: 10px; margin-bottom: 2px;">PHONE (486)</div>
-                <div id="phone-status"></div>
+                <div id="phone-hint-text" style="font-size: 10px; margin-bottom: 2px;">PHONE (---)</div>
+                <div id="phone-status" style="font-size: 9px; color: #ff0; height: 12px;"></div>
                 <div id="phone-display">---</div>
                 <div class="keypad">
                     <div class="key" onclick="press('1')">1</div><div class="key" onclick="press('2')">2</div><div class="key" onclick="press('3')">3</div>
@@ -85,13 +82,9 @@
             <div class="hack-container">
                 <button id="start-hack-btn" onclick="openHackConsole()">보안 터미널 접속</button>
                 <div id="quiz-box">
-                    <div id="quiz-question">ANALYZING...</div>
-                    <div id="maze-container"></div>
-                    <div id="gauge-ui" style="display:none;">
-                        <div id="gauge-bg"><div id="gauge-target"></div><div id="gauge-bar"></div></div>
-                        <button id="hold-btn" style="width:100%; background:#444; color:#fff; border:none; padding:5px; cursor:pointer;">게이지 유지</button>
-                    </div>
-                    <div class="exit-hint">감시자가 돌아옵니다! ESC!</div>
+                    <div id="quiz-question"></div>
+                    <div id="quiz-content"></div>
+                    <div class="exit-hint">감시자 접근 중! ESC로 탈출!</div>
                     <button onclick="closeHackConsole()" style="margin-top:10px; background:#400; color:white; border:none; padding:5px 10px; font-size:10px; cursor:pointer;">로그아웃(ESC)</button>
                 </div>
             </div>
@@ -108,15 +101,14 @@
     <script>
         let totalKills = 0; 
         const watcherDB = [
-            { phone: "486", type: "MAZE" },
-            { phone: "101", type: "GAUGE" },
-            { phone: "777", type: "MAZE" },
-            { phone: "258", type: "GAUGE" }
+            { phone: "486", types: ["MAZE", "GAUGE", "MEMORY", "SLOT", "CODE"] },
+            { phone: "101", types: ["MEMORY", "SLOT", "CODE"] },
+            { phone: "777", types: ["MAZE", "GAUGE"] },
+            { phone: "258", types: ["SLOT", "CODE", "GAUGE"] }
         ];
 
         let dbIdx = 0, isAway = false, missionDone = 0, timeLeft = 15, isHackingMode = false, dialStr = "";
-        let gaugeValue = 0, gaugeInterval;
-        let isPhoneCooling = false; // 전화 쿨타임 상태
+        let gaugeInterval, slotInterval, isPhoneCooling = false;
 
         function init() {
             const container = document.getElementById('check-container');
@@ -153,7 +145,6 @@
         function updateUI() {
             const watcherImg = document.getElementById('watcher-img');
             const stateLabel = document.getElementById('state-label');
-
             if(isAway) {
                 watcherImg.classList.add('away');
                 stateLabel.innerText = "자리 비움"; stateLabel.style.color = "#0f0";
@@ -165,9 +156,7 @@
         }
 
         function openHackConsole() {
-            // 접속 버튼은 항상 가능하지만, 감시 중일 때 누르면 즉시 발각
             if(!isAway) { gameOver(); return; }
-            
             isHackingMode = true;
             document.getElementById('start-hack-btn').style.display = 'none';
             document.getElementById('quiz-box').style.display = 'block';
@@ -179,52 +168,86 @@
             document.getElementById('start-hack-btn').style.display = 'block';
             document.getElementById('quiz-box').style.display = 'none';
             clearInterval(gaugeInterval);
+            clearInterval(slotInterval);
         }
 
         window.addEventListener('keydown', (e) => { if(e.key === 'Escape') closeHackConsole(); });
 
         function makeQuiz() {
-            const current = watcherDB[dbIdx];
+            const types = ["MAZE", "GAUGE", "MEMORY", "SLOT", "CODE"];
+            const currentType = types[Math.floor(Math.random() * types.length)];
             const qText = document.getElementById('quiz-question');
-            const mazeBox = document.getElementById('maze-container');
-            const gaugeBox = document.getElementById('gauge-ui');
-            
-            mazeBox.innerHTML = ""; gaugeBox.style.display = "none";
+            const qContent = document.getElementById('quiz-content');
+            qContent.innerHTML = "";
+            clearInterval(gaugeInterval); clearInterval(slotInterval);
 
-            if(current.type === "MAZE") {
-                qText.innerText = "보안 미로: 파란색에서 분홍색까지!";
-                const mazeData = [1,0,1,1,1, 1,0,0,0,1, 1,1,1,0,1, 0,0,0,0,1, 1,1,1,1,1];
+            if(currentType === "MAZE") {
+                qText.innerText = "경로 구축: BLUE에서 PINK까지 클릭!";
+                const mazeData = [1,0,1,1,1, 1,0,1,0,1, 1,1,1,0,1, 0,0,0,0,1, 1,1,1,1,1];
+                const container = document.createElement('div');
+                container.id = "maze-container";
+                let lastIdx = 0;
+
                 mazeData.forEach((type, idx) => {
                     const cell = document.createElement('div');
                     cell.className = 'cell ' + (type === 0 ? 'wall' : '');
-                    if(idx === 0) cell.classList.add('start', 'player');
-                    if(idx === 24) cell.classList.add('end');
-                    cell.onmouseover = () => {
-                        if(type === 1 && isHackingMode) {
-                            document.querySelectorAll('.cell').forEach(c => c.classList.remove('player'));
-                            cell.classList.add('player');
-                            if(idx === 24) processSuccess();
+                    if(idx === 0) cell.classList.add('start-cell', 'path-active');
+                    if(idx === 24) cell.classList.add('end-cell');
+                    
+                    cell.onclick = () => {
+                        if(type === 1) {
+                            // 인접한 칸인지 간단 체크 (상하좌우)
+                            const diff = Math.abs(idx - lastIdx);
+                            if(diff === 1 || diff === 5) {
+                                cell.classList.add('path-active');
+                                lastIdx = idx;
+                                if(idx === 24) processSuccess();
+                            }
                         }
                     };
-                    mazeBox.appendChild(cell);
+                    container.appendChild(cell);
                 });
-            } else {
-                gaugeBox.style.display = "block";
-                qText.innerText = "타이밍 동기화: 타겟 범위 안에서 떼기!";
-                const bar = document.getElementById('gauge-bar');
-                const btn = document.getElementById('hold-btn');
-                gaugeValue = 0;
-                btn.onmousedown = () => {
-                    gaugeInterval = setInterval(() => {
-                        gaugeValue = (gaugeValue + 2) % 100;
-                        bar.style.width = gaugeValue + "%";
-                    }, 30);
+                qContent.appendChild(container);
+            } else if(currentType === "GAUGE") {
+                qText.innerText = "동기화: 타겟 범위 안에서 클릭!";
+                qContent.innerHTML = `<div id="gauge-bg"><div id="gauge-target"></div><div id="gauge-bar"></div></div><button id="gauge-btn" style="width:100%; padding:5px; background:#444; color:#fff; border:none; cursor:pointer;">CLICK</button>`;
+                let val = 0;
+                gaugeInterval = setInterval(() => { val = (val + 3) % 100; document.getElementById('gauge-bar').style.width = val + "%"; }, 30);
+                document.getElementById('gauge-btn').onclick = () => { if(val >= 70 && val <= 90) processSuccess(); else val = 0; };
+            } else if(currentType === "MEMORY") {
+                qText.innerText = "기억력: 번호를 낮은 순서대로 클릭!";
+                let sequence = [1, 2, 3, 4].sort(() => Math.random() - 0.5);
+                let currentStep = 0;
+                sequence.forEach(num => {
+                    const btn = document.createElement('button');
+                    btn.className = "memory-btn"; btn.innerText = num;
+                    btn.onclick = () => {
+                        if(parseInt(btn.innerText) === [1,2,3,4][currentStep]) {
+                            btn.style.background = "#0f0"; btn.disabled = true;
+                            currentStep++; if(currentStep === 4) processSuccess();
+                        } else { makeQuiz(); }
+                    };
+                    qContent.appendChild(btn);
+                });
+            } else if(currentType === "SLOT") {
+                qText.innerText = "슬롯 매칭: 두 숫자가 같을 때 정지!";
+                qContent.innerHTML = `<div class="slot-display"><span id="s1">0</span><span id="s2">0</span></div><button id="slot-btn" style="width:100%; padding:5px; background:#444; color:#fff; border:none; cursor:pointer;">STOP</button>`;
+                slotInterval = setInterval(() => {
+                    document.getElementById('s1').innerText = Math.floor(Math.random() * 10);
+                    document.getElementById('s2').innerText = Math.floor(Math.random() * 10);
+                }, 100);
+                document.getElementById('slot-btn').onclick = () => {
+                    clearInterval(slotInterval);
+                    if(document.getElementById('s1').innerText === document.getElementById('s2').innerText) processSuccess();
+                    else setTimeout(makeQuiz, 500);
                 };
-                btn.onmouseup = () => {
-                    clearInterval(gaugeInterval);
-                    if(gaugeValue >= 70 && gaugeValue <= 90) processSuccess();
-                    else { gaugeValue = 0; bar.style.width = "0%"; }
-                };
+            } else if(currentType === "CODE") {
+                let code = Math.floor(1000 + Math.random() * 9000);
+                qText.innerText = `암호 입력\n[ ${code} ]`;
+                qContent.innerHTML = `<input type="number" id="code-input">`;
+                const input = document.getElementById('code-input');
+                input.focus();
+                input.oninput = () => { if(input.value === code.toString()) processSuccess(); };
             }
         }
 
@@ -232,36 +255,18 @@
             missionDone++;
             document.getElementById('mission-count').innerText = missionDone;
             document.getElementById('dot-' + (missionDone-1)).classList.add('done');
-            if(missionDone >= 10) win();
-            else makeQuiz();
+            if(missionDone >= 10) win(); else makeQuiz();
         }
 
         function dial() {
-            if(isPhoneCooling) return; // 쿨타임 중이면 무시
-
+            if(isPhoneCooling) return;
             if(dialStr === watcherDB[dbIdx].phone) {
-                if(!isAway) { 
-                    timeLeft = 10; isAway = true; updateUI(); 
-                    startPhoneCoolDown(); // 성공 시에도 쿨타임 적용
-                }
-            } else {
-                startPhoneCoolDown(); // 틀려도 쿨타임 적용
+                if(!isAway) { timeLeft = 10; isAway = true; updateUI(); }
             }
-            clearKey();
-        }
-
-        function startPhoneCoolDown() {
             isPhoneCooling = true;
-            const status = document.getElementById('phone-status');
-            const dialBtn = document.getElementById('dial-btn');
-            status.innerText = "쿨타임 작동 중...";
-            dialBtn.style.opacity = "0.3";
-            
-            setTimeout(() => {
-                isPhoneCooling = false;
-                status.innerText = "";
-                dialBtn.style.opacity = "1";
-            }, 5000); // 5초 쿨타임
+            document.getElementById('phone-status').innerText = "통신 제한 중...";
+            setTimeout(() => { isPhoneCooling = false; document.getElementById('phone-status').innerText = ""; }, 5000);
+            clearKey();
         }
 
         function press(n) { if(!isPhoneCooling) { dialStr += n; document.getElementById('phone-display').innerText = dialStr; } }
@@ -272,13 +277,13 @@
             document.getElementById('kill-num').innerText = totalKills;
             const overlay = document.getElementById('overlay');
             overlay.style.display = "flex";
-            const resImg = document.getElementById('res-img');
-            resImg.style.display = "block"; resImg.src = "https://raw.githubusercontent.com/bagjueun307/surveillance-CCTV/main/3.png";
+            document.getElementById('res-img').style.display = "block";
+            document.getElementById('res-img').src = "https://raw.githubusercontent.com/bagjueun307/surveillance-CCTV/main/3.png";
             document.getElementById('res-title').innerText = "WATCHER ELIMINATED";
             document.getElementById('res-title').style.color = "red";
-            document.getElementById('res-desc').innerText = "감시자가 당신을 발견하고 제거되었습니다. 교대 인원이 투입됩니다.";
-            const btn = document.getElementById('res-btn');
-            btn.innerText = "다음 시퀀스"; btn.style.background = "#f00"; btn.style.color = "white";
+            document.getElementById('res-desc').innerText = "비인가 접속이 감지되었습니다. 타겟을 제거합니다.";
+            document.getElementById('res-btn').innerText = "다음 구역";
+            document.getElementById('res-btn').style.background = "#f00";
             dbIdx = (dbIdx + 1) % watcherDB.length;
         }
 
@@ -289,19 +294,17 @@
             document.getElementById('res-img').style.display = "none";
             document.getElementById('res-title').innerText = "MISSION SUCCESS";
             document.getElementById('res-title').style.color = "#0f0";
-            document.getElementById('res-desc').innerText = "보안망을 완전히 장악했습니다. 시스템이 당신의 통제 하에 있습니다.";
-            const btn = document.getElementById('res-btn');
-            btn.innerText = "다음 구역으로"; btn.style.background = "#0f0"; btn.style.color = "black";
+            document.getElementById('res-desc').innerText = "데이터 추출 완료. 시스템을 장악했습니다.";
+            document.getElementById('res-btn').innerText = "다른 시스템 침투";
+            document.getElementById('res-btn').style.background = "#0f0";
             dbIdx = (dbIdx + 1) % watcherDB.length;
         }
 
         function nextWatcher() {
-            missionDone = 0;
-            document.getElementById('mission-count').innerText = "0";
+            missionDone = 0; document.getElementById('mission-count').innerText = "0";
             document.querySelectorAll('.check-dot').forEach(dot => dot.classList.remove('done'));
             document.getElementById('overlay').style.display = "none";
-            closeHackConsole();
-            updateWatcherInfo();
+            closeHackConsole(); updateWatcherInfo();
             timeLeft = 15; isAway = false; updateUI();
         }
 
