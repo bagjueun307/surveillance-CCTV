@@ -2,57 +2,62 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <title>Surveillance CCTV Escape - 10s Window</title>
+    <title>Surveillance CCTV - 10 Missions</title>
     <style>
         body { background: #050505; color: #00ff00; font-family: 'Courier New', monospace; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; }
-        #game-screen { position: relative; width: 600px; background: #111; border: 4px solid #333; box-shadow: 0 0 20px rgba(0,255,0,0.2); }
+        #game-screen { position: relative; width: 700px; background: #111; border: 4px solid #333; box-shadow: 0 0 20px rgba(0,255,0,0.2); }
         
-        /* 상단 모니터 */
+        /* 상단 모니터 및 미션 현황 */
         #monitor { width: 100%; height: 350px; background: #000; overflow: hidden; position: relative; border-bottom: 4px solid #333; }
         #watcher-img { width: 100%; height: 100%; object-fit: cover; transition: 0.3s; }
         .away { filter: grayscale(1) brightness(0.2); opacity: 0.5; }
         
-        /* 상태 타이머 */
-        #timer-display { position: absolute; top: 10px; right: 10px; font-size: 14px; background: rgba(0,0,0,0.8); padding: 5px 10px; border: 1px solid #0f0; border-radius: 5px; }
+        #mission-status { position: absolute; top: 10px; left: 10px; background: rgba(0,0,0,0.8); padding: 10px; border: 1px solid #0f0; }
+        .check-dot { display: inline-block; width: 12px; height: 12px; border: 1px solid #0f0; margin-right: 4px; border-radius: 2px; }
+        .done { background: #0f0; box-shadow: 0 0 5px #0f0; }
 
-        /* 하단 UI */
-        #ui-panel { display: flex; padding: 20px; gap: 20px; background: #1a1a1a; }
+        #timer-display { position: absolute; top: 10px; right: 10px; font-size: 14px; background: rgba(0,0,0,0.8); padding: 5px 10px; border: 1px solid #0f0; }
+
+        /* 하단 UI 패널 */
+        #ui-panel { display: flex; padding: 20px; gap: 15px; background: #1a1a1a; height: 250px; }
+        
+        /* 키패드 구역 */
         .keypad-container { width: 140px; }
-        #phone-display { background: #000; padding: 5px; text-align: center; border: 1px solid #0f0; height: 20px; margin-bottom: 5px; font-weight: bold; }
+        #phone-display { background: #000; padding: 5px; text-align: center; border: 1px solid #0f0; height: 20px; margin-bottom: 5px; }
         .keypad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; }
-        .key { padding: 10px; background: #333; border: 1px solid #555; color: #0f0; cursor: pointer; text-align: center; }
-        .key:active { background: #0f0; color: #000; }
+        .key { padding: 10px; background: #333; border: 1px solid #555; color: #0f0; cursor: pointer; text-align: center; font-size: 12px; }
 
-        /* 해킹 구역 */
-        .hack-container { flex-grow: 1; display: flex; flex-direction: column; align-items: center; }
-        #hack-btn { width: 100%; height: 80px; background: #020; border: 2px solid #0f0; color: #0f0; font-weight: bold; cursor: pointer; font-size: 16px; }
-        #hack-btn:disabled { border-color: #444; color: #444; cursor: not-allowed; }
-        .progress-box { width: 100%; height: 25px; border: 1px solid #0f0; margin: 15px 0; position: relative; background: #000; }
-        #progress-fill { width: 0%; height: 100%; background: #0f0; transition: 0.1s; }
-        #status-text { font-size: 12px; color: #ff0; text-align: center; height: 15px; }
+        /* 해킹/문제 풀이 구역 */
+        .hack-container { flex-grow: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; border-left: 1px solid #333; padding-left: 15px; }
+        #quiz-box { width: 100%; text-align: center; display: none; }
+        #quiz-question { font-size: 20px; margin-bottom: 10px; color: #ff0; }
+        #quiz-input { background: #000; border: 1px solid #0f0; color: #0f0; width: 100px; font-size: 20px; text-align: center; }
+        
+        #start-hack-btn { width: 100%; height: 100px; background: #020; border: 2px solid #0f0; color: #0f0; font-weight: bold; cursor: pointer; }
+        #start-hack-btn:disabled { border-color: #444; color: #444; cursor: not-allowed; }
 
         /* 결과 화면 */
-        #overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); display: none; flex-direction: column; align-items: center; justify-content: center; z-index: 100; text-align: center; }
-        #overlay img { width: 80%; border: 4px solid red; margin-bottom: 20px; }
-        #overlay h1 { color: red; margin: 0 0 20px 0; }
-        .retry-btn { padding: 10px 30px; background: #0f0; border: none; font-weight: bold; cursor: pointer; }
+        #overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); display: none; flex-direction: column; align-items: center; justify-content: center; z-index: 100; text-align: center; }
+        #overlay img { width: 70%; border: 4px solid red; margin-bottom: 20px; }
     </style>
 </head>
 <body>
 
-    <div style="margin-bottom: 15px; text-align: center;">
-        <strong>[15초 감시 / 10초 공백 시스템]</strong><br>
-        감시자가 전화를 받거나 한눈을 파는 10초를 노리세요!
-    </div>
+    <div style="margin-bottom: 10px;">[최종 임무: 보안 암호 10개를 해제하고 탈출하세요]</div>
 
     <div id="game-screen">
         <div id="monitor">
             <img id="watcher-img" src="1.png">
-            <div id="timer-display">상태: <span id="state-label">감시 중</span> (<span id="cycle-timer">15</span>s)</div>
+            <div id="mission-status">
+                <div>SECURITY MISSION: <span id="mission-count">0</span> / 10</div>
+                <div id="check-container" style="margin-top:5px;"></div>
+            </div>
+            <div id="timer-display"><span id="state-label">감시 중</span> (<span id="cycle-timer">15</span>s)</div>
         </div>
 
         <div id="ui-panel">
             <div class="keypad-container">
+                <div style="font-size: 10px; margin-bottom: 5px;">PHONE 유인(486)</div>
                 <div id="phone-display">---</div>
                 <div class="keypad">
                     <div class="key" onclick="press('1')">1</div><div class="key" onclick="press('2')">2</div><div class="key" onclick="press('3')">3</div>
@@ -63,120 +68,142 @@
             </div>
 
             <div class="hack-container">
-                <div id="status-text">감시자가 모니터링 중입니다.</div>
-                <div class="progress-box"><div id="progress-fill"></div></div>
-                <button id="hack-btn" onmousedown="startHack()" onmouseup="stopHack()" onmouseleave="stopHack()" disabled>방화벽 해제 버튼 (HOLD)</button>
+                <button id="start-hack-btn" onclick="toggleHackMode()">해킹 콘솔 접속</button>
+                
+                <div id="quiz-box">
+                    <div id="quiz-question">READY?</div>
+                    <input type="number" id="quiz-input" onkeydown="checkQuiz(event)" placeholder="??">
+                    <div style="font-size: 11px; color: #888; margin-top: 10px;">정답 입력 후 Enter (감시자가 오면 중단!)</div>
+                </div>
             </div>
         </div>
 
         <div id="overlay">
-            <h1 id="res-title">딱 걸렸어!</h1>
+            <h1 id="res-title">TERMINATED</h1>
             <img id="res-img" src="2.png">
-            <button class="retry-btn" onclick="location.reload()">다시 시작</button>
+            <button onclick="location.reload()" style="padding:10px 20px; cursor:pointer; background:#0f0; font-weight:bold;">REBOOT SYSTEM</button>
         </div>
     </div>
 
     <script>
         let isAway = false;
-        let progress = 0;
+        let missionDone = 0;
+        let timeLeft = 15;
+        let currentAns = 0;
+        let isHackingMode = false;
         let dialStr = "";
-        let hackInterval;
-        let timeLeft = 15; // 초기 감시 시간
-        let isPhoneLured = false;
 
-        const watcherImg = document.getElementById('watcher-img');
-        const hackBtn = document.getElementById('hack-btn');
-        const progressFill = document.getElementById('progress-fill');
-        const statusText = document.getElementById('status-text');
-        const cycleTimerText = document.getElementById('cycle-timer');
-        const stateLabel = document.getElementById('state-label');
+        // 초기화
+        function init() {
+            const container = document.getElementById('check-container');
+            for(let i=0; i<10; i++) {
+                const dot = document.createElement('div');
+                dot.className = 'check-dot';
+                dot.id = 'dot-' + i;
+                container.appendChild(dot);
+            }
+            startCycle();
+        }
 
-        // 메인 타이머 루프
-        function gameTimer() {
+        // 사이클 루프 (15초 감시 / 10초 공백)
+        function startCycle() {
             setInterval(() => {
-                if (isPhoneLured) return; // 전화 유인 중에는 자동 타이머 중지
-
                 timeLeft--;
-                
-                if (timeLeft <= 0) {
-                    if (!isAway) {
-                        // 감시 -> 자리비움 (10초)
-                        triggerAway(10);
-                    } else {
-                        // 자리비움 -> 감시 (15초)
-                        triggerWatch(15);
-                    }
+                if(timeLeft <= 0) {
+                    isAway = !isAway;
+                    timeLeft = isAway ? 10 : 15;
+                    updateUI();
                 }
-                cycleTimerText.innerText = timeLeft;
+                document.getElementById('cycle-timer').innerText = timeLeft;
             }, 1000);
         }
 
-        function triggerAway(duration) {
-            isAway = true;
-            timeLeft = duration;
-            stateLabel.innerText = "자리 비움";
-            stateLabel.style.color = "#0f0";
-            watcherImg.classList.add('away');
-            hackBtn.disabled = false;
-            statusText.innerText = "감시자가 자리를 비웠습니다! 해킹 가능!";
-        }
+        function updateUI() {
+            const watcherImg = document.getElementById('watcher-img');
+            const stateLabel = document.getElementById('state-label');
+            const hackBtn = document.getElementById('start-hack-btn');
 
-        function triggerWatch(duration) {
-            isAway = false;
-            isPhoneLured = false;
-            timeLeft = duration;
-            stateLabel.innerText = "감시 중";
-            stateLabel.style.color = "red";
-            watcherImg.classList.remove('away');
-            hackBtn.disabled = true;
-            statusText.innerText = "감시자가 돌아왔습니다! 멈추세요!";
-            if(progress > 0) checkDetection();
-        }
-
-        function dial() {
-            if(dialStr === "486") {
-                isPhoneLured = true;
-                triggerAway(10); // 전화 유인 시에도 10초간 자리를 비움
-                clearKey();
+            if(isAway) {
+                watcherImg.classList.add('away');
+                stateLabel.innerText = "자리 비움";
+                stateLabel.style.color = "#0f0";
+                hackBtn.disabled = false;
             } else {
-                alert("연결할 수 없습니다.");
-                clearKey();
+                watcherImg.classList.remove('away');
+                stateLabel.innerText = "감시 중";
+                stateLabel.style.color = "red";
+                hackBtn.disabled = true;
+                // 감시자가 돌아왔는데 해킹 모드라면 발각!
+                if(isHackingMode) gameOver();
             }
         }
 
-        function press(n) { if(dialStr.length < 3) dialStr += n; updateDisplay(); }
-        function clearKey() { dialStr = ""; updateDisplay(); }
-        function updateDisplay() { document.getElementById('phone-display').innerText = dialStr || "---"; }
-
-        function startHack() {
+        // 해킹 모드 진입
+        function toggleHackMode() {
             if(!isAway) { gameOver(); return; }
-            hackInterval = setInterval(() => {
-                progress += 0.5;
-                progressFill.style.width = progress + "%";
-                if(progress >= 100) { clearInterval(hackInterval); win(); }
-            }, 50);
+            isHackingMode = true;
+            document.getElementById('start-hack-btn').style.display = 'none';
+            document.getElementById('quiz-box').style.display = 'block';
+            makeQuiz();
         }
 
-        function stopHack() { clearInterval(hackInterval); }
+        function makeQuiz() {
+            const n1 = Math.floor(Math.random() * 9) + 1;
+            const n2 = Math.floor(Math.random() * 9) + 1;
+            currentAns = n1 + n2;
+            document.getElementById('quiz-question').innerText = `${n1} + ${n2} = ?`;
+            document.getElementById('quiz-input').value = "";
+            document.getElementById('quiz-input').focus();
+        }
 
-        function checkDetection() {
-            if(!isAway && progress > 0) gameOver();
+        function checkQuiz(e) {
+            if(e.key === 'Enter') {
+                const val = parseInt(document.getElementById('quiz-input').value);
+                if(val === currentAns) {
+                    missionDone++;
+                    updateMissionVisuals();
+                    if(missionDone >= 10) {
+                        win();
+                    } else {
+                        makeQuiz();
+                    }
+                } else {
+                    alert("코드 오류! 다시 입력하세요.");
+                }
+            }
+        }
+
+        function updateMissionVisuals() {
+            document.getElementById('mission-count').innerText = missionDone;
+            document.getElementById('dot-' + (missionDone-1)).classList.add('done');
+        }
+
+        // 전화 기능
+        function press(n) { dialStr += n; document.getElementById('phone-display').innerText = dialStr; }
+        function clearKey() { dialStr = ""; document.getElementById('phone-display').innerText = "---"; }
+        function dial() {
+            if(dialStr === "486") {
+                if(!isAway) { timeLeft = 10; isAway = true; updateUI(); }
+                alert("감시자가 전화를 받으러 나갔습니다!");
+            }
+            clearKey();
         }
 
         function gameOver() {
-            stopHack();
+            isHackingMode = false;
             document.getElementById('overlay').style.display = "flex";
             document.getElementById('res-img').src = "2.png";
         }
 
         function win() {
+            isHackingMode = false;
             document.getElementById('overlay').style.display = "flex";
-            document.getElementById('res-title').innerText = "해킹 성공! 탈출 완료!";
+            document.getElementById('res-title').innerText = "MISSION COMPLETE";
             document.getElementById('res-title').style.color = "#0f0";
             document.getElementById('res-img').src = "1.png";
         }
 
-        gameTimer();
+        window.onload = init;
     </script>
 </body>
 </html>
