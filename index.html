@@ -24,12 +24,12 @@
         #phone-display { background: #000; padding: 5px; text-align: center; border: 1px solid #0f0; height: 20px; margin-bottom: 5px; }
         .keypad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; }
         .key { padding: 10px; background: #333; border: 1px solid #555; color: #0f0; cursor: pointer; text-align: center; font-size: 12px; }
+        .key:disabled { color: #444; cursor: not-allowed; }
 
         .hack-container { flex-grow: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; border-left: 1px solid #333; padding-left: 15px; position: relative; }
         #quiz-box { width: 100%; text-align: center; display: none; background: #000; padding: 15px; border: 1px solid #0f0; box-sizing: border-box; }
         #quiz-question { font-size: 14px; margin-bottom: 10px; color: #ff0; }
 
-        /* 신규 문제 유형 스타일 */
         #maze-container { display: grid; grid-template-columns: repeat(5, 25px); gap: 2px; justify-content: center; margin: 0 auto; }
         .cell { width: 25px; height: 25px; background: #222; border: 1px solid #333; cursor: pointer; }
         .wall { background: #444; cursor: not-allowed; }
@@ -41,14 +41,17 @@
         #gauge-bar { width: 0%; height: 100%; background: #0f0; transition: 0.1s; }
         #gauge-target { position: absolute; left: 70%; width: 20%; height: 100%; border: 2px solid #fff; box-sizing: border-box; }
 
+        /* 보안 접속 버튼: 비활성화 스타일 제거 */
         #start-hack-btn { width: 100%; height: 100px; background: #020; border: 2px solid #0f0; color: #0f0; font-weight: bold; cursor: pointer; }
-        #start-hack-btn:disabled { border-color: #444; color: #444; cursor: not-allowed; }
 
         .exit-hint { font-size: 10px; color: #ff0000; margin-top: 5px; animation: flash 1s infinite; }
         @keyframes flash { 50% { opacity: 0; } }
 
         #overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); display: none; flex-direction: column; align-items: center; justify-content: center; z-index: 100; text-align: center; }
         #overlay img { width: 70%; border: 4px solid red; margin-bottom: 20px; }
+        
+        /* 쿨타임 알림 스타일 */
+        #phone-status { font-size: 9px; color: #ff0; height: 12px; margin-bottom: 2px; }
     </style>
 </head>
 <body>
@@ -68,13 +71,14 @@
 
         <div id="ui-panel">
             <div class="keypad-container">
-                <div id="phone-hint-text" style="font-size: 10px; margin-bottom: 5px;">PHONE (486)</div>
+                <div id="phone-hint-text" style="font-size: 10px; margin-bottom: 2px;">PHONE (486)</div>
+                <div id="phone-status"></div>
                 <div id="phone-display">---</div>
                 <div class="keypad">
                     <div class="key" onclick="press('1')">1</div><div class="key" onclick="press('2')">2</div><div class="key" onclick="press('3')">3</div>
                     <div class="key" onclick="press('4')">4</div><div class="key" onclick="press('5')">5</div><div class="key" onclick="press('6')">6</div>
                     <div class="key" onclick="press('7')">7</div><div class="key" onclick="press('8')">8</div><div class="key" onclick="press('9')">9</div>
-                    <div class="key" onclick="clearKey()">C</div><div class="key" onclick="press('0')">0</div><div class="key" onclick="dial()">📞</div>
+                    <div class="key" onclick="clearKey()">C</div><div class="key" onclick="press('0')">0</div><div class="key" id="dial-btn" onclick="dial()">📞</div>
                 </div>
             </div>
 
@@ -85,7 +89,7 @@
                     <div id="maze-container"></div>
                     <div id="gauge-ui" style="display:none;">
                         <div id="gauge-bg"><div id="gauge-target"></div><div id="gauge-bar"></div></div>
-                        <button id="hold-btn" style="width:100%; background:#444; color:#fff; border:none; padding:5px;">꾹 누르기 (타이밍 조절)</button>
+                        <button id="hold-btn" style="width:100%; background:#444; color:#fff; border:none; padding:5px; cursor:pointer;">게이지 유지</button>
                     </div>
                     <div class="exit-hint">감시자가 돌아옵니다! ESC!</div>
                     <button onclick="closeHackConsole()" style="margin-top:10px; background:#400; color:white; border:none; padding:5px 10px; font-size:10px; cursor:pointer;">로그아웃(ESC)</button>
@@ -112,6 +116,7 @@
 
         let dbIdx = 0, isAway = false, missionDone = 0, timeLeft = 15, isHackingMode = false, dialStr = "";
         let gaugeValue = 0, gaugeInterval;
+        let isPhoneCooling = false; // 전화 쿨타임 상태
 
         function init() {
             const container = document.getElementById('check-container');
@@ -148,22 +153,21 @@
         function updateUI() {
             const watcherImg = document.getElementById('watcher-img');
             const stateLabel = document.getElementById('state-label');
-            const hackBtn = document.getElementById('start-hack-btn');
 
             if(isAway) {
                 watcherImg.classList.add('away');
                 stateLabel.innerText = "자리 비움"; stateLabel.style.color = "#0f0";
-                hackBtn.disabled = false;
             } else {
                 watcherImg.classList.remove('away');
                 stateLabel.innerText = "감시 중"; stateLabel.style.color = "red";
-                hackBtn.disabled = true;
                 if(isHackingMode) gameOver();
             }
         }
 
         function openHackConsole() {
+            // 접속 버튼은 항상 가능하지만, 감시 중일 때 누르면 즉시 발각
             if(!isAway) { gameOver(); return; }
+            
             isHackingMode = true;
             document.getElementById('start-hack-btn').style.display = 'none';
             document.getElementById('quiz-box').style.display = 'block';
@@ -188,16 +192,15 @@
             mazeBox.innerHTML = ""; gaugeBox.style.display = "none";
 
             if(current.type === "MAZE") {
-                qText.innerText = "보안 미로: 출발지(파랑)에서 끝(분홍)까지!";
-                const mazeData = [1,0,1,1,1, 1,0,0,0,1, 1,1,1,0,1, 0,0,0,0,1, 1,1,1,1,1]; // 1: 길, 0: 벽
-                let playerPos = 0;
+                qText.innerText = "보안 미로: 파란색에서 분홍색까지!";
+                const mazeData = [1,0,1,1,1, 1,0,0,0,1, 1,1,1,0,1, 0,0,0,0,1, 1,1,1,1,1];
                 mazeData.forEach((type, idx) => {
                     const cell = document.createElement('div');
                     cell.className = 'cell ' + (type === 0 ? 'wall' : '');
                     if(idx === 0) cell.classList.add('start', 'player');
                     if(idx === 24) cell.classList.add('end');
                     cell.onmouseover = () => {
-                        if(type === 1) {
+                        if(type === 1 && isHackingMode) {
                             document.querySelectorAll('.cell').forEach(c => c.classList.remove('player'));
                             cell.classList.add('player');
                             if(idx === 24) processSuccess();
@@ -207,7 +210,7 @@
                 });
             } else {
                 gaugeBox.style.display = "block";
-                qText.innerText = "출력 동기화: 게이지를 하얀 박스 안에 맞추고 떼세요!";
+                qText.innerText = "타이밍 동기화: 타겟 범위 안에서 떼기!";
                 const bar = document.getElementById('gauge-bar');
                 const btn = document.getElementById('hold-btn');
                 gaugeValue = 0;
@@ -233,8 +236,35 @@
             else makeQuiz();
         }
 
-        function dial() { if(dialStr === watcherDB[dbIdx].phone) { if(!isAway) { timeLeft = 10; isAway = true; updateUI(); } } clearKey(); }
-        function press(n) { dialStr += n; document.getElementById('phone-display').innerText = dialStr; }
+        function dial() {
+            if(isPhoneCooling) return; // 쿨타임 중이면 무시
+
+            if(dialStr === watcherDB[dbIdx].phone) {
+                if(!isAway) { 
+                    timeLeft = 10; isAway = true; updateUI(); 
+                    startPhoneCoolDown(); // 성공 시에도 쿨타임 적용
+                }
+            } else {
+                startPhoneCoolDown(); // 틀려도 쿨타임 적용
+            }
+            clearKey();
+        }
+
+        function startPhoneCoolDown() {
+            isPhoneCooling = true;
+            const status = document.getElementById('phone-status');
+            const dialBtn = document.getElementById('dial-btn');
+            status.innerText = "쿨타임 작동 중...";
+            dialBtn.style.opacity = "0.3";
+            
+            setTimeout(() => {
+                isPhoneCooling = false;
+                status.innerText = "";
+                dialBtn.style.opacity = "1";
+            }, 5000); // 5초 쿨타임
+        }
+
+        function press(n) { if(!isPhoneCooling) { dialStr += n; document.getElementById('phone-display').innerText = dialStr; } }
         function clearKey() { dialStr = ""; document.getElementById('phone-display').innerText = "---"; }
 
         function gameOver() {
@@ -246,7 +276,7 @@
             resImg.style.display = "block"; resImg.src = "https://raw.githubusercontent.com/bagjueun307/surveillance-CCTV/main/3.png";
             document.getElementById('res-title').innerText = "WATCHER ELIMINATED";
             document.getElementById('res-title').style.color = "red";
-            document.getElementById('res-desc').innerText = "감시자가 제거되었습니다. 다음 인원이 교대합니다.";
+            document.getElementById('res-desc').innerText = "감시자가 당신을 발견하고 제거되었습니다. 교대 인원이 투입됩니다.";
             const btn = document.getElementById('res-btn');
             btn.innerText = "다음 시퀀스"; btn.style.background = "#f00"; btn.style.color = "white";
             dbIdx = (dbIdx + 1) % watcherDB.length;
@@ -259,9 +289,9 @@
             document.getElementById('res-img').style.display = "none";
             document.getElementById('res-title').innerText = "MISSION SUCCESS";
             document.getElementById('res-title').style.color = "#0f0";
-            document.getElementById('res-desc').innerText = "완벽한 침투입니다. 시스템 제어권을 완전히 장악했습니다.";
+            document.getElementById('res-desc').innerText = "보안망을 완전히 장악했습니다. 시스템이 당신의 통제 하에 있습니다.";
             const btn = document.getElementById('res-btn');
-            btn.innerText = "다른 구역 침투"; btn.style.background = "#0f0"; btn.style.color = "black";
+            btn.innerText = "다음 구역으로"; btn.style.background = "#0f0"; btn.style.color = "black";
             dbIdx = (dbIdx + 1) % watcherDB.length;
         }
 
