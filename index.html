@@ -15,10 +15,8 @@
         .check-dot { display: inline-block; width: 12px; height: 12px; border: 1px solid #0f0; margin-right: 4px; border-radius: 2px; }
         .done { background: #0f0; box-shadow: 0 0 5px #0f0; }
         
-        /* 실시간 누적 킬 카운터 */
         #kill-counter { position: absolute; top: 50px; right: 10px; background: rgba(50, 0, 0, 0.9); border: 1px solid #ff0000; padding: 8px; color: #ff0000; text-align: center; z-index: 10; min-width: 90px; }
         #kill-num { font-size: 24px; font-weight: bold; display: block; }
-
         #timer-display { position: absolute; top: 10px; right: 10px; font-size: 14px; background: rgba(0,0,0,0.8); padding: 5px 10px; border: 1px solid #0f0; }
 
         #ui-panel { display: flex; padding: 20px; gap: 15px; background: #1a1a1a; height: 250px; }
@@ -28,12 +26,20 @@
         .key { padding: 10px; background: #333; border: 1px solid #555; color: #0f0; cursor: pointer; text-align: center; font-size: 12px; }
 
         .hack-container { flex-grow: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; border-left: 1px solid #333; padding-left: 15px; position: relative; }
-        #quiz-box { width: 100%; text-align: center; display: none; background: #000; padding: 20px; border: 1px solid #0f0; box-sizing: border-box; }
-        #quiz-question { font-size: 18px; margin-bottom: 10px; color: #ff0; }
-        #quiz-input { background: #000; border: 1px solid #0f0; color: #0f0; width: 100px; font-size: 20px; text-align: center; margin-bottom: 10px; }
-        
-        #hold-btn { display: none; width: 120px; height: 40px; background: #400; border: 2px solid #f00; color: #f00; cursor: pointer; font-weight: bold; margin: 0 auto 10px; }
-        #hold-btn:active { background: #f00; color: #000; }
+        #quiz-box { width: 100%; text-align: center; display: none; background: #000; padding: 15px; border: 1px solid #0f0; box-sizing: border-box; }
+        #quiz-question { font-size: 14px; margin-bottom: 10px; color: #ff0; }
+
+        /* 신규 문제 유형 스타일 */
+        #maze-container { display: grid; grid-template-columns: repeat(5, 25px); gap: 2px; justify-content: center; margin: 0 auto; }
+        .cell { width: 25px; height: 25px; background: #222; border: 1px solid #333; cursor: pointer; }
+        .wall { background: #444; cursor: not-allowed; }
+        .start { background: #00f; }
+        .end { background: #f0f; }
+        .player { background: #0f0; box-shadow: 0 0 5px #0f0; }
+
+        #gauge-bg { width: 150px; height: 20px; background: #333; margin: 10px auto; border: 1px solid #555; position: relative; }
+        #gauge-bar { width: 0%; height: 100%; background: #0f0; transition: 0.1s; }
+        #gauge-target { position: absolute; left: 70%; width: 20%; height: 100%; border: 2px solid #fff; box-sizing: border-box; }
 
         #start-hack-btn { width: 100%; height: 100px; background: #020; border: 2px solid #0f0; color: #0f0; font-weight: bold; cursor: pointer; }
         #start-hack-btn:disabled { border-color: #444; color: #444; cursor: not-allowed; }
@@ -47,15 +53,11 @@
 </head>
 <body>
 
-    <div style="margin-bottom: 10px; color: yellow;">[주의: 감시자가 오기 전 ESC 키를 눌러 해킹 콘솔을 닫으세요!]</div>
+    <div style="margin-bottom: 10px; color: yellow;">[주의: 감시자가 오기 전 ESC 키를 눌러 대피하세요!]</div>
 
     <div id="game-screen">
         <div id="monitor">
-            <div id="kill-counter">
-                ELIMINATED
-                <span id="kill-num">0</span>
-            </div>
-
+            <div id="kill-counter">ELIMINATED<span id="kill-num">0</span></div>
             <img id="watcher-img" src="https://raw.githubusercontent.com/bagjueun307/surveillance-CCTV/main/1.png">
             <div id="mission-status">
                 <div>MISSION: <span id="mission-count">0</span> / 10</div>
@@ -78,13 +80,15 @@
 
             <div class="hack-container">
                 <button id="start-hack-btn" onclick="openHackConsole()">보안 터미널 접속</button>
-                
                 <div id="quiz-box">
                     <div id="quiz-question">ANALYZING...</div>
-                    <input type="number" id="quiz-input" onkeydown="handleInput(event)" placeholder="??">
-                    <button id="hold-btn">보안 해제 유지 중...</button>
-                    <div class="exit-hint">감시자가 돌아옵니다! ESC를 눌러 대피!</div>
-                    <button onclick="closeHackConsole()" style="margin-top:10px; background:#400; color:white; border:none; cursor:pointer; font-size:10px; padding:5px 10px;">로그아웃(ESC)</button>
+                    <div id="maze-container"></div>
+                    <div id="gauge-ui" style="display:none;">
+                        <div id="gauge-bg"><div id="gauge-target"></div><div id="gauge-bar"></div></div>
+                        <button id="hold-btn" style="width:100%; background:#444; color:#fff; border:none; padding:5px;">꾹 누르기 (타이밍 조절)</button>
+                    </div>
+                    <div class="exit-hint">감시자가 돌아옵니다! ESC!</div>
+                    <button onclick="closeHackConsole()" style="margin-top:10px; background:#400; color:white; border:none; padding:5px 10px; font-size:10px; cursor:pointer;">로그아웃(ESC)</button>
                 </div>
             </div>
         </div>
@@ -98,25 +102,16 @@
     </div>
 
     <script>
-        // 전역 변수: 게임 전체에서 유지됨
         let totalKills = 0; 
-
         const watcherDB = [
-            { phone: "486", type: "MATH" },
-            { phone: "101", type: "HOLD" },
-            { phone: "777", type: "MATH" },
-            { phone: "000", type: "HOLD" }
+            { phone: "486", type: "MAZE" },
+            { phone: "101", type: "GAUGE" },
+            { phone: "777", type: "MAZE" },
+            { phone: "258", type: "GAUGE" }
         ];
 
-        let dbIdx = 0;
-        let isAway = false;
-        let missionDone = 0;
-        let timeLeft = 15;
-        let currentAns = 0;
-        let isHackingMode = false;
-        let dialStr = "";
-        let holdTimer;
-        let holdProgress = 0;
+        let dbIdx = 0, isAway = false, missionDone = 0, timeLeft = 15, isHackingMode = false, dialStr = "";
+        let gaugeValue = 0, gaugeInterval;
 
         function init() {
             const container = document.getElementById('check-container');
@@ -147,7 +142,7 @@
             const current = watcherDB[dbIdx];
             document.getElementById('phone-hint-text').innerText = `PHONE (${current.phone})`;
             document.getElementById('watcher-img').src = "https://raw.githubusercontent.com/bagjueun307/surveillance-CCTV/main/1.png";
-            document.getElementById('kill-num').innerText = totalKills; // 화면 갱신 시 누적 수 반영
+            document.getElementById('kill-num').innerText = totalKills;
         }
 
         function updateUI() {
@@ -157,13 +152,11 @@
 
             if(isAway) {
                 watcherImg.classList.add('away');
-                stateLabel.innerText = "자리 비움";
-                stateLabel.style.color = "#0f0";
+                stateLabel.innerText = "자리 비움"; stateLabel.style.color = "#0f0";
                 hackBtn.disabled = false;
             } else {
                 watcherImg.classList.remove('away');
-                stateLabel.innerText = "감시 중";
-                stateLabel.style.color = "red";
+                stateLabel.innerText = "감시 중"; stateLabel.style.color = "red";
                 hackBtn.disabled = true;
                 if(isHackingMode) gameOver();
             }
@@ -181,53 +174,54 @@
             isHackingMode = false;
             document.getElementById('start-hack-btn').style.display = 'block';
             document.getElementById('quiz-box').style.display = 'none';
-            clearInterval(holdTimer);
+            clearInterval(gaugeInterval);
         }
 
-        window.addEventListener('keydown', (e) => {
-            if(e.key === 'Escape') closeHackConsole();
-        });
+        window.addEventListener('keydown', (e) => { if(e.key === 'Escape') closeHackConsole(); });
 
         function makeQuiz() {
             const current = watcherDB[dbIdx];
             const qText = document.getElementById('quiz-question');
-            const qInput = document.getElementById('quiz-input');
-            const qHold = document.getElementById('hold-btn');
+            const mazeBox = document.getElementById('maze-container');
+            const gaugeBox = document.getElementById('gauge-ui');
+            
+            mazeBox.innerHTML = ""; gaugeBox.style.display = "none";
 
-            if(current.type === "MATH") {
-                qInput.style.display = "inline-block";
-                qHold.style.display = "none";
-                const n1 = Math.floor(Math.random() * 9) + 1;
-                const n2 = Math.floor(Math.random() * 9) + 1;
-                currentAns = n1 + n2;
-                qText.innerText = `${n1} + ${n2} = ?`;
-                qInput.value = "";
-                qInput.focus();
+            if(current.type === "MAZE") {
+                qText.innerText = "보안 미로: 출발지(파랑)에서 끝(분홍)까지!";
+                const mazeData = [1,0,1,1,1, 1,0,0,0,1, 1,1,1,0,1, 0,0,0,0,1, 1,1,1,1,1]; // 1: 길, 0: 벽
+                let playerPos = 0;
+                mazeData.forEach((type, idx) => {
+                    const cell = document.createElement('div');
+                    cell.className = 'cell ' + (type === 0 ? 'wall' : '');
+                    if(idx === 0) cell.classList.add('start', 'player');
+                    if(idx === 24) cell.classList.add('end');
+                    cell.onmouseover = () => {
+                        if(type === 1) {
+                            document.querySelectorAll('.cell').forEach(c => c.classList.remove('player'));
+                            cell.classList.add('player');
+                            if(idx === 24) processSuccess();
+                        }
+                    };
+                    mazeBox.appendChild(cell);
+                });
             } else {
-                qInput.style.display = "none";
-                qHold.style.display = "block";
-                qText.innerText = "바이오 보안 해제: 버튼 유지";
-                qHold.onmousedown = startHold;
-                qHold.onmouseup = endHold;
-            }
-        }
-
-        function startHold() {
-            holdProgress = 0;
-            holdTimer = setInterval(() => {
-                holdProgress += 20;
-                if(holdProgress >= 100) {
-                    clearInterval(holdTimer);
-                    processSuccess();
-                }
-            }, 300);
-        }
-        function endHold() { clearInterval(holdTimer); }
-
-        function handleInput(e) {
-            if(e.key === 'Enter') {
-                const val = parseInt(document.getElementById('quiz-input').value);
-                if(val === currentAns) processSuccess();
+                gaugeBox.style.display = "block";
+                qText.innerText = "출력 동기화: 게이지를 하얀 박스 안에 맞추고 떼세요!";
+                const bar = document.getElementById('gauge-bar');
+                const btn = document.getElementById('hold-btn');
+                gaugeValue = 0;
+                btn.onmousedown = () => {
+                    gaugeInterval = setInterval(() => {
+                        gaugeValue = (gaugeValue + 2) % 100;
+                        bar.style.width = gaugeValue + "%";
+                    }, 30);
+                };
+                btn.onmouseup = () => {
+                    clearInterval(gaugeInterval);
+                    if(gaugeValue >= 70 && gaugeValue <= 90) processSuccess();
+                    else { gaugeValue = 0; bar.style.width = "0%"; }
+                };
             }
         }
 
@@ -239,36 +233,22 @@
             else makeQuiz();
         }
 
-        function dial() {
-            if(dialStr === watcherDB[dbIdx].phone) {
-                if(!isAway) { timeLeft = 10; isAway = true; updateUI(); }
-            }
-            clearKey();
-        }
+        function dial() { if(dialStr === watcherDB[dbIdx].phone) { if(!isAway) { timeLeft = 10; isAway = true; updateUI(); } } clearKey(); }
         function press(n) { dialStr += n; document.getElementById('phone-display').innerText = dialStr; }
         function clearKey() { dialStr = ""; document.getElementById('phone-display').innerText = "---"; }
 
         function gameOver() {
-            isHackingMode = false;
-            totalKills++; // 누적 킬 증가
+            isHackingMode = false; totalKills++;
             document.getElementById('kill-num').innerText = totalKills;
-            
             const overlay = document.getElementById('overlay');
             overlay.style.display = "flex";
-            
             const resImg = document.getElementById('res-img');
-            resImg.style.display = "block"; // 발각 시 이미지 노출
-            resImg.src = "https://raw.githubusercontent.com/bagjueun307/surveillance-CCTV/main/3.png";
-            
+            resImg.style.display = "block"; resImg.src = "https://raw.githubusercontent.com/bagjueun307/surveillance-CCTV/main/3.png";
             document.getElementById('res-title').innerText = "WATCHER ELIMINATED";
             document.getElementById('res-title').style.color = "red";
-            document.getElementById('res-desc').innerText = "감시자가 당신을 발견하고 제거되었습니다. 새로운 타겟이 배치됩니다.";
-            
+            document.getElementById('res-desc').innerText = "감시자가 제거되었습니다. 다음 인원이 교대합니다.";
             const btn = document.getElementById('res-btn');
-            btn.innerText = "다음 구역 시퀀스";
-            btn.style.background = "#f00";
-            btn.style.color = "white";
-
+            btn.innerText = "다음 시퀀스"; btn.style.background = "#f00"; btn.style.color = "white";
             dbIdx = (dbIdx + 1) % watcherDB.length;
         }
 
@@ -276,35 +256,23 @@
             isHackingMode = false;
             const overlay = document.getElementById('overlay');
             overlay.style.display = "flex";
-            
-            const resImg = document.getElementById('res-img');
-            resImg.style.display = "none"; // 성공 시 이미지 숨김 (핵심 수정)
-            
+            document.getElementById('res-img').style.display = "none";
             document.getElementById('res-title').innerText = "MISSION SUCCESS";
             document.getElementById('res-title').style.color = "#0f0";
-            document.getElementById('res-desc').innerText = "시스템의 모든 제어권을 획득했습니다. 완벽한 승리입니다.";
-            
+            document.getElementById('res-desc').innerText = "완벽한 침투입니다. 시스템 제어권을 완전히 장악했습니다.";
             const btn = document.getElementById('res-btn');
-            btn.innerText = "다른 시스템 침투";
-            btn.style.background = "#0f0";
-            btn.style.color = "black";
-            
+            btn.innerText = "다른 구역 침투"; btn.style.background = "#0f0"; btn.style.color = "black";
             dbIdx = (dbIdx + 1) % watcherDB.length;
         }
 
         function nextWatcher() {
-            missionDone = 0; // 미션 점수 리셋
+            missionDone = 0;
             document.getElementById('mission-count').innerText = "0";
-            const dots = document.getElementsByClassName('check-dot');
-            for(let dot of dots) dot.classList.remove('done');
-
+            document.querySelectorAll('.check-dot').forEach(dot => dot.classList.remove('done'));
             document.getElementById('overlay').style.display = "none";
             closeHackConsole();
-            updateWatcherInfo(); // 킬 카운트 포함 정보 갱신
-            
-            timeLeft = 15;
-            isAway = false;
-            updateUI();
+            updateWatcherInfo();
+            timeLeft = 15; isAway = false; updateUI();
         }
 
         window.onload = init;
