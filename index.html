@@ -2,154 +2,181 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <title>Surveillance Escape</title>
+    <title>Surveillance CCTV Escape - 10s Window</title>
     <style>
-        body { background: #111; color: #0f0; font-family: 'Courier New', monospace; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; }
-        #game-screen { position: relative; width: 600px; height: 700px; border: 5px solid #333; background: #000; }
+        body { background: #050505; color: #00ff00; font-family: 'Courier New', monospace; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; }
+        #game-screen { position: relative; width: 600px; background: #111; border: 4px solid #333; box-shadow: 0 0 20px rgba(0,255,0,0.2); }
         
-        /* 감시자 모니터 구역 */
-        #monitor { width: 100%; height: 350px; background: #222; overflow: hidden; position: relative; border-bottom: 5px solid #333; }
-        #watcher-img { width: 100%; height: 100%; object-fit: cover; transition: opacity 0.5s; }
-        #monitor-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; border: 10px solid transparent; transition: 0.3s; }
-        .watching { border-color: rgba(255, 0, 0, 0.5) !important; } /* 감시 중일 때 붉은 테두리 */
+        /* 상단 모니터 */
+        #monitor { width: 100%; height: 350px; background: #000; overflow: hidden; position: relative; border-bottom: 4px solid #333; }
+        #watcher-img { width: 100%; height: 100%; object-fit: cover; transition: 0.3s; }
+        .away { filter: grayscale(1) brightness(0.2); opacity: 0.5; }
+        
+        /* 상태 타이머 */
+        #timer-display { position: absolute; top: 10px; right: 10px; font-size: 14px; background: rgba(0,0,0,0.8); padding: 5px 10px; border: 1px solid #0f0; border-radius: 5px; }
 
-        /* 하단 조작 구역 */
-        #control-panel { display: flex; padding: 20px; justify-content: space-between; height: 300px; }
-        
-        /* 키패드 */
-        #keypad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; width: 150px; }
-        .key { padding: 15px; background: #444; border: 1px solid #666; color: white; cursor: pointer; text-align: center; }
-        .key:hover { background: #666; }
+        /* 하단 UI */
+        #ui-panel { display: flex; padding: 20px; gap: 20px; background: #1a1a1a; }
+        .keypad-container { width: 140px; }
+        #phone-display { background: #000; padding: 5px; text-align: center; border: 1px solid #0f0; height: 20px; margin-bottom: 5px; font-weight: bold; }
+        .keypad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; }
+        .key { padding: 10px; background: #333; border: 1px solid #555; color: #0f0; cursor: pointer; text-align: center; }
+        .key:active { background: #0f0; color: #000; }
 
-        /* 해킹 패널 */
-        #hacking-zone { width: 350px; text-align: center; border-left: 1px solid #333; padding-left: 20px; }
-        #hack-button { width: 100%; height: 100px; background: #050; color: #0f0; border: 2px solid #0f0; font-weight: bold; cursor: pointer; font-size: 20px; margin-top: 20px; }
-        #hack-button:disabled { border-color: #333; color: #333; cursor: not-allowed; }
-        
-        #progress-container { width: 100%; height: 300px; background: #111; border: 1px solid #0f0; margin-top: 10px; position: relative; }
-        #progress-fill { width: 0%; height: 100%; background: rgba(0, 255, 0, 0.3); transition: 0.2s; }
-        #status-msg { margin-top: 10px; font-size: 14px; color: yellow; }
+        /* 해킹 구역 */
+        .hack-container { flex-grow: 1; display: flex; flex-direction: column; align-items: center; }
+        #hack-btn { width: 100%; height: 80px; background: #020; border: 2px solid #0f0; color: #0f0; font-weight: bold; cursor: pointer; font-size: 16px; }
+        #hack-btn:disabled { border-color: #444; color: #444; cursor: not-allowed; }
+        .progress-box { width: 100%; height: 25px; border: 1px solid #0f0; margin: 15px 0; position: relative; background: #000; }
+        #progress-fill { width: 0%; height: 100%; background: #0f0; transition: 0.1s; }
+        #status-text { font-size: 12px; color: #ff0; text-align: center; height: 15px; }
+
+        /* 결과 화면 */
+        #overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); display: none; flex-direction: column; align-items: center; justify-content: center; z-index: 100; text-align: center; }
+        #overlay img { width: 80%; border: 4px solid red; margin-bottom: 20px; }
+        #overlay h1 { color: red; margin: 0 0 20px 0; }
+        .retry-btn { padding: 10px 30px; background: #0f0; border: none; font-weight: bold; cursor: pointer; }
     </style>
 </head>
 <body>
 
-    <div style="margin-bottom: 10px;">힌트: 감시자의 번호는 [ 4 8 6 ] 입니다.</div>
+    <div style="margin-bottom: 15px; text-align: center;">
+        <strong>[15초 감시 / 10초 공백 시스템]</strong><br>
+        감시자가 전화를 받거나 한눈을 파는 10초를 노리세요!
+    </div>
 
     <div id="game-screen">
         <div id="monitor">
-            <img id="watcher-img" src="watcher.jpg" alt="감시자">
-            <div id="monitor-overlay" class="watching"></div>
+            <img id="watcher-img" src="1.png">
+            <div id="timer-display">상태: <span id="state-label">감시 중</span> (<span id="cycle-timer">15</span>s)</div>
         </div>
 
-        <div id="control-panel">
-            <div>
-                <div style="margin-bottom: 10px;">PHONE KEYPAD</div>
-                <div id="keypad">
-                    <div class="key" onclick="pressKey('1')">1</div>
-                    <div class="key" onclick="pressKey('2')">2</div>
-                    <div class="key" onclick="pressKey('3')">3</div>
-                    <div class="key" onclick="pressKey('4')">4</div>
-                    <div class="key" onclick="pressKey('5')">5</div>
-                    <div class="key" onclick="pressKey('6')">6</div>
-                    <div class="key" onclick="pressKey('7')">7</div>
-                    <div class="key" onclick="pressKey('8')">8</div>
-                    <div class="key" onclick="pressKey('9')">9</div>
-                    <div class="key" onclick="pressKey('*')">*</div>
-                    <div class="key" onclick="pressKey('0')">0</div>
-                    <div class="key" onclick="clearKey()">C</div>
+        <div id="ui-panel">
+            <div class="keypad-container">
+                <div id="phone-display">---</div>
+                <div class="keypad">
+                    <div class="key" onclick="press('1')">1</div><div class="key" onclick="press('2')">2</div><div class="key" onclick="press('3')">3</div>
+                    <div class="key" onclick="press('4')">4</div><div class="key" onclick="press('5')">5</div><div class="key" onclick="press('6')">6</div>
+                    <div class="key" onclick="press('7')">7</div><div class="key" onclick="press('8')">8</div><div class="key" onclick="press('9')">9</div>
+                    <div class="key" onclick="clearKey()">C</div><div class="key" onclick="press('0')">0</div><div class="key" onclick="dial()">📞</div>
                 </div>
-                <div id="dial-display" style="margin-top:10px; font-size: 20px;">- - -</div>
             </div>
 
-            <div id="hacking-zone">
-                <div>FIREWALL SECURITY</div>
-                <div id="progress-container">
-                    <div id="progress-fill"></div>
-                    <div style="position: absolute; top: 45%; width: 100%;">PROGRESS: <span id="percent">0</span>%</div>
-                </div>
-                <button id="hack-button" onmousedown="startHacking()" onmouseup="stopHacking()" disabled>HOLD TO HACK</button>
-                <div id="status-msg">감시자가 보고 있습니다...</div>
+            <div class="hack-container">
+                <div id="status-text">감시자가 모니터링 중입니다.</div>
+                <div class="progress-box"><div id="progress-fill"></div></div>
+                <button id="hack-btn" onmousedown="startHack()" onmouseup="stopHack()" onmouseleave="stopHack()" disabled>방화벽 해제 버튼 (HOLD)</button>
             </div>
+        </div>
+
+        <div id="overlay">
+            <h1 id="res-title">딱 걸렸어!</h1>
+            <img id="res-img" src="2.png">
+            <button class="retry-btn" onclick="location.reload()">다시 시작</button>
         </div>
     </div>
 
     <script>
-        let isWatcherAway = false;
-        let hackProgress = 0;
-        let dialInput = "";
-        const targetNumber = "486";
-        
-        const watcherImg = document.getElementById('watcher-img');
-        const overlay = document.getElementById('monitor-overlay');
-        const hackBtn = document.getElementById('hack-button');
-        const statusMsg = document.getElementById('status-msg');
-        const progressFill = document.getElementById('progress-fill');
-        const percentText = document.getElementById('percent');
+        let isAway = false;
+        let progress = 0;
+        let dialStr = "";
+        let hackInterval;
+        let timeLeft = 15; // 초기 감시 시간
+        let isPhoneLured = false;
 
-        // 1. 키패드 입력 로직
-        function pressKey(num) {
-            dialInput += num;
-            document.getElementById('dial-display').innerText = dialInput;
-            
-            if (dialInput === targetNumber) {
-                triggerAway();
-            } else if (dialInput.length >= 3) {
+        const watcherImg = document.getElementById('watcher-img');
+        const hackBtn = document.getElementById('hack-btn');
+        const progressFill = document.getElementById('progress-fill');
+        const statusText = document.getElementById('status-text');
+        const cycleTimerText = document.getElementById('cycle-timer');
+        const stateLabel = document.getElementById('state-label');
+
+        // 메인 타이머 루프
+        function gameTimer() {
+            setInterval(() => {
+                if (isPhoneLured) return; // 전화 유인 중에는 자동 타이머 중지
+
+                timeLeft--;
+                
+                if (timeLeft <= 0) {
+                    if (!isAway) {
+                        // 감시 -> 자리비움 (10초)
+                        triggerAway(10);
+                    } else {
+                        // 자리비움 -> 감시 (15초)
+                        triggerWatch(15);
+                    }
+                }
+                cycleTimerText.innerText = timeLeft;
+            }, 1000);
+        }
+
+        function triggerAway(duration) {
+            isAway = true;
+            timeLeft = duration;
+            stateLabel.innerText = "자리 비움";
+            stateLabel.style.color = "#0f0";
+            watcherImg.classList.add('away');
+            hackBtn.disabled = false;
+            statusText.innerText = "감시자가 자리를 비웠습니다! 해킹 가능!";
+        }
+
+        function triggerWatch(duration) {
+            isAway = false;
+            isPhoneLured = false;
+            timeLeft = duration;
+            stateLabel.innerText = "감시 중";
+            stateLabel.style.color = "red";
+            watcherImg.classList.remove('away');
+            hackBtn.disabled = true;
+            statusText.innerText = "감시자가 돌아왔습니다! 멈추세요!";
+            if(progress > 0) checkDetection();
+        }
+
+        function dial() {
+            if(dialStr === "486") {
+                isPhoneLured = true;
+                triggerAway(10); // 전화 유인 시에도 10초간 자리를 비움
+                clearKey();
+            } else {
+                alert("연결할 수 없습니다.");
                 clearKey();
             }
         }
 
-        function clearKey() {
-            dialInput = "";
-            document.getElementById('dial-display').innerText = "- - -";
-        }
+        function press(n) { if(dialStr.length < 3) dialStr += n; updateDisplay(); }
+        function clearKey() { dialStr = ""; updateDisplay(); }
+        function updateDisplay() { document.getElementById('phone-display').innerText = dialStr || "---"; }
 
-        // 2. 감시자 유인 로직
-        function triggerAway() {
-            isWatcherAway = true;
-            watcherImg.style.opacity = "0.1"; // 감시자 사라짐 효과
-            overlay.classList.remove('watching');
-            hackBtn.disabled = false;
-            statusMsg.innerText = "감시자가 자리를 비웠습니다! 해킹하세요!";
-            clearKey();
-
-            // 7초 후 복귀
-            setTimeout(() => {
-                isWatcherAway = false;
-                watcherImg.style.opacity = "1";
-                overlay.classList.add('watching');
-                hackBtn.disabled = true;
-                statusMsg.innerText = "감시자가 돌아왔습니다!";
-                stopHacking();
-            }, 7000);
-        }
-
-        // 3. 해킹 로직
-        let hackInterval;
-        function startHacking() {
-            if (!isWatcherAway) return;
+        function startHack() {
+            if(!isAway) { gameOver(); return; }
             hackInterval = setInterval(() => {
-                if (hackProgress < 100) {
-                    hackProgress += 1;
-                    progressFill.style.width = hackProgress + "%";
-                    percentText.innerText = hackProgress;
-                } else {
-                    alert("탈출 성공! 방화벽이 해제되었습니다.");
-                    location.reload();
-                }
+                progress += 0.5;
+                progressFill.style.width = progress + "%";
+                if(progress >= 100) { clearInterval(hackInterval); win(); }
             }, 50);
         }
 
-        function stopHacking() {
-            clearInterval(hackInterval);
+        function stopHack() { clearInterval(hackInterval); }
+
+        function checkDetection() {
+            if(!isAway && progress > 0) gameOver();
         }
 
-        // 4. 감시 중 클릭 감지 (패배 조건)
-        document.body.addEventListener('mousedown', () => {
-            if (!isWatcherAway && hackProgress > 0) {
-                alert("감시자에게 걸렸습니다! 게임 오버.");
-                location.reload();
-            }
-        });
+        function gameOver() {
+            stopHack();
+            document.getElementById('overlay').style.display = "flex";
+            document.getElementById('res-img').src = "2.png";
+        }
+
+        function win() {
+            document.getElementById('overlay').style.display = "flex";
+            document.getElementById('res-title').innerText = "해킹 성공! 탈출 완료!";
+            document.getElementById('res-title').style.color = "#0f0";
+            document.getElementById('res-img').src = "1.png";
+        }
+
+        gameTimer();
     </script>
 </body>
 </html>
