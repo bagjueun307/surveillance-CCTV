@@ -17,6 +17,10 @@
         .done { background: #0f0; box-shadow: 0 0 5px #0f0; }
         #timer-display { position: absolute; top: 10px; right: 10px; font-size: 14px; background: rgba(0,0,0,0.8); padding: 5px 10px; border: 1px solid #0f0; }
 
+        /* 누적 킬 카운트 UI (추가됨) */
+        #kill-counter { position: absolute; top: 10px; left: 720px; width: 150px; background: #1a0000; border: 2px solid #ff0000; padding: 15px; color: #ff0000; text-align: center; box-shadow: 0 0 10px rgba(255,0,0,0.3); }
+        #kill-num { font-size: 32px; font-weight: bold; display: block; margin-top: 5px; }
+
         /* 하단 UI 패널 */
         #ui-panel { display: flex; padding: 20px; gap: 15px; background: #1a1a1a; height: 250px; }
         .keypad-container { width: 140px; }
@@ -30,9 +34,9 @@
         #quiz-question { font-size: 18px; margin-bottom: 10px; color: #ff0; }
         #quiz-input { background: #000; border: 1px solid #0f0; color: #0f0; width: 100px; font-size: 20px; text-align: center; margin-bottom: 10px; }
         
-        /* 새로운 유형: 꾹 누르기 버튼 */
-        #hold-btn { display: none; width: 120px; height: 40px; background: #440000; border: 2px solid #ff0000; color: #ff0000; cursor: pointer; font-weight: bold; margin: 0 auto 10px; }
-        #hold-btn:active { background: #ff0000; color: #000; }
+        /* 특수 미션: 꾹 누르기 */
+        #hold-btn { display: none; width: 120px; height: 40px; background: #400; border: 2px solid #f00; color: #f00; cursor: pointer; font-weight: bold; margin: 0 auto 10px; }
+        #hold-btn:active { background: #f00; color: #000; }
 
         #start-hack-btn { width: 100%; height: 100px; background: #020; border: 2px solid #0f0; color: #0f0; font-weight: bold; cursor: pointer; }
         #start-hack-btn:disabled { border-color: #444; color: #444; cursor: not-allowed; }
@@ -49,20 +53,25 @@
 
     <div style="margin-bottom: 10px; color: yellow;">[주의: 감시자가 오기 전 ESC 키를 눌러 해킹 콘솔을 닫으세요!]</div>
 
+    <div id="kill-counter">
+        ELIMINATED
+        <span id="kill-num">0</span>
+    </div>
+
     <div id="game-screen">
         <div id="monitor">
             <img id="watcher-img" src="https://raw.githubusercontent.com/bagjueun307/surveillance-CCTV/main/1.png">
             <div id="mission-status">
                 <div>MISSION: <span id="mission-count">0</span> / 10</div>
                 <div id="check-container" style="margin-top:5px;"></div>
-                <div id="watcher-tag" style="font-size: 10px; color: #0f0; margin-top:5px;">ID: 감시자_A</div>
+                <div id="watcher-tag" style="font-size: 10px; color: #f00; margin-top:5px;">상태: 추적 중</div>
             </div>
             <div id="timer-display"><span id="state-label">감시 중</span> (<span id="cycle-timer">15</span>s)</div>
         </div>
 
         <div id="ui-panel">
             <div class="keypad-container">
-                <div id="phone-hint-text" style="font-size: 10px; margin-bottom: 5px;">PHONE (486)</div>
+                <div id="phone-hint-text" style="font-size: 10px; margin-bottom: 5px;">PHONE (---)</div>
                 <div id="phone-display">---</div>
                 <div class="keypad">
                     <div class="key" onclick="press('1')">1</div><div class="key" onclick="press('2')">2</div><div class="key" onclick="press('3')">3</div>
@@ -78,30 +87,34 @@
                 <div id="quiz-box">
                     <div id="quiz-question">ANALYZING...</div>
                     <input type="number" id="quiz-input" onkeydown="handleInput(event)" placeholder="??">
-                    <button id="hold-btn">지문 매칭 중...</button>
-                    <div class="exit-hint">감시자가 오고 있습니다! ESC를 눌러 로그아웃!</div>
-                    <button onclick="closeHackConsole()" style="margin-top:10px; background:#400; color:white; border:none; cursor:pointer; font-size:10px; padding:5px 10px;">강제 로그아웃(ESC)</button>
+                    <button id="hold-btn">바이오메트릭 우회 중...</button>
+                    <div class="exit-hint">감시자가 돌아옵니다! 제거되기 싫다면 ESC!</div>
+                    <button onclick="closeHackConsole()" style="margin-top:10px; background:#400; color:white; border:none; cursor:pointer; font-size:10px; padding:5px 10px;">로그아웃(ESC)</button>
                 </div>
             </div>
         </div>
 
         <div id="overlay">
-            <h1 id="res-title">TERMINATED</h1>
-            <img id="res-img" src="https://raw.githubusercontent.com/bagjueun307/surveillance-CCTV/main/2.png">
-            <button onclick="nextSequence()" style="padding:10px 20px; cursor:pointer; background:#0f0; font-weight:bold;">새로운 감시자 시퀀스 접속</button>
+            <h1 id="res-title" style="color:red;">WATCHER ELIMINATED</h1>
+            <img id="res-img" src="https://raw.githubusercontent.com/bagjueun307/surveillance-CCTV/main/3.png">
+            <div id="res-desc" style="margin-bottom:20px; color:#aaa;">감시자가 당신을 발견하고 제거되었습니다. 새로운 인원이 배치됩니다.</div>
+            <button onclick="nextWatcher()" style="padding:10px 20px; cursor:pointer; background:#f00; color:white; font-weight:bold; border:none;">다음 타겟 확인</button>
         </div>
     </div>
 
     <script>
-        // 감시자 데이터베이스 (번호 및 문제 유형 관리)
+        // 감시자 데이터베이스
         const watcherDB = [
-            { id: "A", phone: "486", type: "MATH" },
-            { id: "B", phone: "100", type: "HOLD" },
-            { id: "C", phone: "258", type: "MATH" },
-            { id: "D", phone: "777", type: "HOLD" }
+            { phone: "486", type: "MATH" },
+            { phone: "101", type: "HOLD" },
+            { phone: "732", type: "MATH" },
+            { phone: "999", type: "HOLD" },
+            { phone: "154", type: "MATH" }
         ];
 
         let dbIdx = 0;
+        let killCount = 0; // 누적 처치 수 (리셋 안됨)
+        
         let isAway = false;
         let missionDone = 0;
         let timeLeft = 15;
@@ -114,14 +127,14 @@
 
         function init() {
             const container = document.getElementById('check-container');
-            container.innerHTML = ""; // 초기화
+            container.innerHTML = "";
             for(let i=0; i<10; i++) {
                 const dot = document.createElement('div');
                 dot.className = 'check-dot';
                 dot.id = 'dot-' + i;
                 container.appendChild(dot);
             }
-            applyWatcherData();
+            updateWatcherInfo();
             startCycle();
         }
 
@@ -137,10 +150,9 @@
             }, 1000);
         }
 
-        function applyWatcherData() {
+        function updateWatcherInfo() {
             const current = watcherDB[dbIdx];
             document.getElementById('phone-hint-text').innerText = `PHONE (${current.phone})`;
-            document.getElementById('watcher-tag').innerText = `ID: 감시자_${current.id}`;
             document.getElementById('watcher-img').src = "https://raw.githubusercontent.com/bagjueun307/surveillance-CCTV/main/1.png";
         }
 
@@ -200,28 +212,23 @@
             } else if(current.type === "HOLD") {
                 qInput.style.display = "none";
                 qHold.style.display = "block";
-                qText.innerText = "보안 우회: 버튼을 2초간 유지";
-                
+                qText.innerText = "데이터 강제 주입: 버튼 유지";
                 qHold.onmousedown = startHold;
                 qHold.onmouseup = endHold;
-                qHold.onmouseleave = endHold;
             }
         }
 
         function startHold() {
             holdProgress = 0;
             holdTimer = setInterval(() => {
-                holdProgress += 10;
+                holdProgress += 20;
                 if(holdProgress >= 100) {
                     clearInterval(holdTimer);
                     processSuccess();
                 }
-            }, 200);
+            }, 300);
         }
-
-        function endHold() {
-            clearInterval(holdTimer);
-        }
+        function endHold() { clearInterval(holdTimer); }
 
         function handleInput(e) {
             if(e.key === 'Enter') {
@@ -243,23 +250,25 @@
         function dial() {
             if(dialStr === watcherDB[dbIdx].phone) {
                 if(!isAway) { timeLeft = 10; isAway = true; updateUI(); }
-                alert("교란 성공. 감시자가 응답을 확인하러 이동합니다.");
             }
             clearKey();
         }
 
         function gameOver() {
             isHackingMode = false;
-            document.getElementById('overlay').style.display = "flex";
-            // 발각 시 이미지 요청사항 반영
-            document.getElementById('res-img').src = "https://raw.githubusercontent.com/bagjueun307/surveillance-CCTV/main/3.png";
-            document.getElementById('res-title').innerText = "DETECTION ALERT";
+            // 킬 카운트 증가
+            killCount++;
+            document.getElementById('kill-num').innerText = killCount;
             
-            // 감시자 교체 로직
+            // 결과창 표시
+            document.getElementById('overlay').style.display = "flex";
+            document.getElementById('res-img').src = "https://raw.githubusercontent.com/bagjueun307/surveillance-CCTV/main/3.png";
+            
+            // 다음 감시자 데이터 준비
             dbIdx = (dbIdx + 1) % watcherDB.length;
         }
 
-        function nextSequence() {
+        function nextWatcher() {
             // 미션 리셋
             missionDone = 0;
             document.getElementById('mission-count').innerText = "0";
@@ -268,9 +277,8 @@
 
             document.getElementById('overlay').style.display = "none";
             closeHackConsole();
-            applyWatcherData();
+            updateWatcherInfo();
             
-            // 상태 초기화
             timeLeft = 15;
             isAway = false;
             updateUI();
@@ -279,8 +287,9 @@
         function win() {
             isHackingMode = false;
             document.getElementById('overlay').style.display = "flex";
-            document.getElementById('res-title').innerText = "ESCAPE SUCCESS";
+            document.getElementById('res-title').innerText = "SYSTEM HIJACKED";
             document.getElementById('res-title').style.color = "#0f0";
+            document.getElementById('res-desc').innerText = "모든 보안을 돌파했습니다. 관리자 권한을 획득했습니다.";
             document.getElementById('res-img').src = "https://raw.githubusercontent.com/bagjueun307/surveillance-CCTV/main/1.png";
         }
 
